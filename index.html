@@ -719,7 +719,7 @@ button{
 
         <div class="flex flex-col sm:flex-row gap-3 justify-end">
           <button id="btn-clear-airtable" class="px-5 py-3 rounded-2xl border border-slate-200 text-slate-700 font-extrabold hover:bg-slate-50 transition-colors">נקה</button>
-          <button onclick="forceRefreshFromAirtable()" class="px-5 py-3 rounded-2xl border border-amber-300 bg-amber-50 text-amber-800 font-extrabold hover:bg-amber-100 transition-colors" title="מחק Cache וטען מחדש מ-Airtable">🔄 רענן נתונים</button>
+          <button onclick="forceRefreshFromAirtable()" class="px-5 py-3 rounded-2xl border border-amber-300 bg-amber-50 text-amber-800 font-extrabold hover:bg-amber-100 transition-colors" title="מחק Cache וטען מחדש">🔄 רענן נתונים</button>
           <button id="btn-save-airtable" class="px-5 py-3 rounded-2xl bg-slate-900 text-white font-extrabold hover:bg-slate-800 transition-colors">שמור</button>
           <button id="btn-load-airtable" class="px-6 py-3 rounded-2xl bg-primary text-white font-extrabold hover:bg-blue-700 transition-colors">טען מ-Airtable</button>
         </div>
@@ -933,8 +933,8 @@ button{
           rule: 'כלל מבחנה'
         },
         backup: {
-          pat: 'patxUHEUCI9aXDZCV.44585f0b23d4d3fce219f67f04d988ee7267ebe6447fb126d8f153e9feec70c9',
-          base: 'appOm6hgcofhsZ4hq',
+          pat: 'pat7m8nUFZYtQgKLJ.8d2126dcb181f9563195d68b61f5c4f1e9826de18b4c0e19159c7a3484d41e16',
+          base: 'appeuZRayzDEVRzrD',
           table: 'ezz123',
           view: ''
         },
@@ -1043,7 +1043,8 @@ window.clearGroupFilters = () => {
       return `<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-black border ${statusClass} ${activeClass}"><span class="w-2 h-2 rounded-full ${dotClass}"></span>${escapeHtml(label)}</span>`;
     };
 
-    const renderApiStatusCard = () => {
+    const renderApiStatusCard = () => { return ''; // מוסתר
+
       const activeKey = norm(state.apiStatus?.activeKey);
       const activeLabel = norm(state.apiStatus?.activeLabel) || getApiLabel(activeKey) || 'לא נבחר';
       const primaryBadge = getApiIndicatorBadge('1', activeKey === 'primary', state.apiStatus?.primaryOk);
@@ -1078,7 +1079,7 @@ window.clearGroupFilters = () => {
         const activeLabel = norm(state.apiStatus?.activeLabel) || state.dataSource;
         if (state.dataSource === 'Cache') {
           const ageLabel = getCacheAgeLabel() || '';
-          el.innerHTML = `<span title="לחץ Ctrl+Shift+R לרענון מ-Airtable">📦 ${state.tests.length} בדיקות מ-Cache ${ageLabel ? '(' + ageLabel + ')' : ''}</span>`;
+          el.innerHTML = `<span title="לחץ Ctrl+Shift+R לרענון">📦 ${state.tests.length} בדיקות מ-Cache ${ageLabel ? '(' + ageLabel + ')' : ''}</span>`;
           el.className = 'text-sm font-semibold text-amber-700 flex items-center gap-1 cursor-help';
         } else {
           el.innerHTML = `נטענו ${state.tests.length} בדיקות (${activeLabel})`;
@@ -1109,7 +1110,6 @@ window.clearGroupFilters = () => {
      *  Airtable (client-side)
      **********************/
     const LS_KEY = 'labtests_airtable_config_v1';
-
     /**********************
      *  Cache System
      **********************/
@@ -1119,15 +1119,9 @@ window.clearGroupFilters = () => {
 
     const saveDataToCache = (data) => {
       try {
-        const cacheObj = {
-          timestamp: Date.now(),
-          tests: data.tests || [],
-          meta: data.meta || {},
-        };
+        const cacheObj = { timestamp: Date.now(), tests: data.tests || [], meta: data.meta || {} };
         localStorage.setItem(CACHE_KEY, JSON.stringify(cacheObj));
-      } catch (e) {
-        console.warn('Cache save failed:', e);
-      }
+      } catch (e) { console.warn('Cache save failed:', e); }
     };
 
     const loadDataFromCache = () => {
@@ -1137,19 +1131,12 @@ window.clearGroupFilters = () => {
         const cache = JSON.parse(raw);
         if (!cache || !cache.timestamp) return null;
         const age = Date.now() - cache.timestamp;
-        if (age > CACHE_TTL_MS) {
-          localStorage.removeItem(CACHE_KEY);
-          return null;
-        }
+        if (age > CACHE_TTL_MS) { localStorage.removeItem(CACHE_KEY); return null; }
         return cache;
-      } catch (e) {
-        return null;
-      }
+      } catch (e) { return null; }
     };
 
-    const clearDataCache = () => {
-      localStorage.removeItem(CACHE_KEY);
-    };
+    const clearDataCache = () => { localStorage.removeItem(CACHE_KEY); };
 
     const getCacheAgeLabel = () => {
       try {
@@ -1168,16 +1155,14 @@ window.clearGroupFilters = () => {
       } catch (e) { return null; }
     };
 
-    // Resolve image: if value is just a filename (no http), build GitHub URL
     const resolveImageUrl = (rawVal) => {
       if (!rawVal) return '';
       const s = norm(rawVal);
       if (!s) return '';
-      // Already a full URL (Airtable attachment URL or http link)
       if (s.startsWith('http://') || s.startsWith('https://')) return s;
-      // It's just a filename → build GitHub URL
       return GITHUB_IMAGE_BASE + encodeURIComponent(s);
     };
+
 
     const loadAirtableConfigFromLS = () => {
       try {
@@ -1305,7 +1290,7 @@ window.clearGroupFilters = () => {
         const colorRaw = norm(fields[f.color] ?? fields['צבע מבחנה'] ?? fields['צבע'] ?? fields['tube color']);
         let tube_type = normalizeMulti(fields[f.type] ?? fields['test type'] ?? fields['TEST TYPE'] ?? fields['Test Type'] ?? fields['סוג מבחנה'] ?? fields['מבחנה'] ?? fields['tube type']);
 
-        // תמונה: קודם עמודת "תמונה בגט הב" (שם קובץ ל-GitHub), אחר כך עמודת תמונה רגילה (Attachment)
+        // תמונה: קודם עמודת "תמונה בגט הב" (שם קובץ ל-GitHub), אחר כך עמודת תמונה רגילה
         const githubImageName = norm(fields['תמונה בגט הב'] ?? fields['github_image'] ?? '');
         const attachmentUrl = getAirtableAttachmentUrl(fields[f.image] ?? fields['תמונה'] ?? fields['image']);
         const image = resolveImageUrl(githubImageName || attachmentUrl);
@@ -1733,10 +1718,7 @@ window.clearGroupFilters = () => {
 
       // שמירת cache לאחר טעינה מוצלחת
       if (state.dataLoaded) {
-        saveDataToCache({
-          tests: state.tests,
-          meta: state.meta,
-        });
+        saveDataToCache({ tests: state.tests, meta: state.meta });
         console.info(`Cache saved: ${state.tests.length} tests`);
       }
 
@@ -3840,10 +3822,15 @@ document.getElementById('btn-save-airtable').addEventListener('click', () => {
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') {
         openAirtableModal();
       }
-      // Ctrl+Shift+R = רענון מ-Airtable (מוסתר לאדמין)
+      // Ctrl+Shift+R = רענון מ-Airtable
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'r') {
         e.preventDefault();
         if (window.forceRefreshFromAirtable) window.forceRefreshFromAirtable();
+      }
+      // Ctrl+Shift+X = מסך דיאגנוסטיקה
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'x') {
+        e.preventDefault();
+        if (window.openDiagModal) window.openDiagModal();
       }
     });
 
@@ -3867,14 +3854,12 @@ document.getElementById('btn-save-airtable').addEventListener('click', () => {
         state.dataSource = 'Cache';
         state.showFilters = true;
         state.homeLoading = false;
-        const ageLabel = getCacheAgeLabel() || '';
-        console.info(`Loaded from cache: ${state.tests.length} tests (${ageLabel})`);
+        console.info(`Loaded from cache: ${state.tests.length} tests`);
         renderApp();
         setDataStatus();
-        return; // לא צריך לגשת ל-Airtable
+        return;
       }
 
-      // אין Cache תקף — טעינה מ-Airtable
       state.homeLoading = hasAirtableConfig;
       renderApp();
 
@@ -3901,7 +3886,7 @@ document.getElementById('btn-save-airtable').addEventListener('click', () => {
       }
     }
 
-    // רענון ידני (מוסתר לאדמין — Ctrl+Shift+R)
+    // רענון ידני (Ctrl+Shift+R)
     window.forceRefreshFromAirtable = async () => {
       clearDataCache();
       state.dataLoaded = false;
@@ -3994,6 +3979,169 @@ function addManualTest() {
 
   closeManualTestModal();
   renderApp();
+}
+</script>
+
+<!-- ===== Diagnostics Modal (Ctrl+Shift+X) ===== -->
+<div id="diagModal" class="modal-backdrop no-print" role="dialog" aria-modal="true" style="z-index:90;">
+  <div class="w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden" style="max-height:90vh;overflow-y:auto;">
+    <div class="p-5 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white text-lg">🔧</div>
+        <div>
+          <h3 class="text-lg font-black text-slate-800">דיאגנוסטיקה</h3>
+          <p class="text-xs text-slate-400">מצב חיבורים, Cache ונתונים</p>
+        </div>
+      </div>
+      <button onclick="closeDiagModal()" class="p-2 rounded-xl hover:bg-slate-50">
+        <svg class="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="p-6 space-y-5" id="diagBody">
+      <div class="text-center text-slate-400 py-8">טוען...</div>
+    </div>
+    <div class="p-4 border-t border-slate-100 flex gap-3 justify-end sticky bottom-0 bg-white">
+      <button onclick="runDiagnostics()" class="px-5 py-2.5 rounded-2xl bg-slate-900 text-white font-extrabold hover:bg-slate-700 transition-colors">🔄 בדוק שוב</button>
+      <button onclick="closeDiagModal()" class="px-5 py-2.5 rounded-2xl border border-slate-200 text-slate-700 font-extrabold hover:bg-slate-50 transition-colors">סגור</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openDiagModal() {
+  document.getElementById('diagModal').classList.add('open');
+  runDiagnostics();
+}
+window.openDiagModal = openDiagModal;
+
+function closeDiagModal() {
+  document.getElementById('diagModal').classList.remove('open');
+}
+window.closeDiagModal = closeDiagModal;
+
+async function runDiagnostics() {
+  const body = document.getElementById('diagBody');
+  body.innerHTML = `<div class="text-center text-slate-400 py-8 animate-pulse">בודק חיבורים...</div>`;
+
+  const cacheRaw = localStorage.getItem('labtests_data_cache_v1');
+  let cacheInfo = null;
+  if (cacheRaw) {
+    try {
+      const c = JSON.parse(cacheRaw);
+      const ageMs = Date.now() - c.timestamp;
+      const ageMins = Math.floor(ageMs / 60000);
+      const ageHours = Math.floor(ageMins / 60);
+      const ageDays = Math.floor(ageHours / 24);
+      const ageLabel = ageDays > 0 ? `${ageDays} ימים` : ageHours > 0 ? `${ageHours} שעות` : `${ageMins} דקות`;
+      const expiresMs = (7 * 24 * 60 * 60 * 1000) - ageMs;
+      const expiresDays = Math.floor(expiresMs / 86400000);
+      const expiresHours = Math.floor((expiresMs % 86400000) / 3600000);
+      const expiresLabel = expiresDays > 0 ? `${expiresDays} ימים ו-${expiresHours} שעות` : `${expiresHours} שעות`;
+      cacheInfo = { ok: true, ageLabel, expiresLabel, testsCount: (c.tests || []).length, savedAt: new Date(c.timestamp).toLocaleString('he-IL'), sizeKb: Math.round(cacheRaw.length / 1024) };
+    } catch(e) { cacheInfo = { ok: false, error: 'Cache פגום' }; }
+  }
+
+  const sources = [];
+  const buildSource = (key, label, cfg) => {
+    if (cfg && cfg.pat && cfg.base && cfg.table) sources.push({ key, label, pat: cfg.pat, base: cfg.base, table: cfg.table, view: cfg.view || '' });
+  };
+  buildSource('primary', 'Primary (1)', { pat: state.airtable.pat, base: state.airtable.base, table: state.airtable.table, view: state.airtable.view });
+  buildSource('backup', 'Backup (2)', state.airtable.backup || {});
+
+  const apiResults = [];
+  for (const src of sources) {
+    const t0 = performance.now();
+    let status = 'error', records = 0, errorMsg = '', responseMs = 0;
+    try {
+      const url = new URL(`https://api.airtable.com/v0/${src.base}/${encodeURIComponent(src.table)}`);
+      if (src.view) url.searchParams.set('view', src.view);
+      url.searchParams.set('pageSize', '1');
+      const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${src.pat}` } });
+      responseMs = Math.round(performance.now() - t0);
+      if (res.ok) { const data = await res.json(); records = (data.records || []).length; status = 'ok'; }
+      else { const txt = await res.text().catch(() => ''); errorMsg = `HTTP ${res.status}${txt ? ' — ' + txt.slice(0, 120) : ''}`; }
+    } catch (e) { responseMs = Math.round(performance.now() - t0); errorMsg = e.message || 'שגיאת רשת'; }
+    const maskedPat = src.pat ? src.pat.slice(0, 12) + '...' + src.pat.slice(-4) : '—';
+    apiResults.push({ ...src, status, records, errorMsg, responseMs, maskedPat });
+  }
+
+  const activeSourceKey = state.airtable.activeSource || 'primary';
+  const statusBadge = (ok, label) => ok
+    ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-black"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>${label}</span>`
+    : `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-xs font-black"><span class="w-2 h-2 rounded-full bg-rose-500"></span>${label}</span>`;
+  const infoRow = (label, val, mono) =>
+    `<div class="flex justify-between items-start gap-3 py-1.5 border-b border-slate-50 last:border-0">
+      <span class="text-xs font-extrabold text-slate-500 shrink-0">${label}</span>
+      <span class="text-xs font-bold text-slate-800 text-left ${mono ? 'font-mono' : ''} break-all">${val}</span>
+    </div>`;
+
+  let html = '';
+
+  html += `<section>
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-sm font-black text-slate-700">📦 מצב Cache</span>
+      ${cacheInfo ? statusBadge(cacheInfo.ok, cacheInfo.ok ? 'תקין' : 'פגום') : statusBadge(false, 'ריק')}
+    </div>
+    <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">`;
+  if (!cacheInfo) html += `<p class="text-sm text-slate-500 font-bold text-center py-2">אין Cache — הנתונים יטענו מ-Airtable בפתיחה הבאה</p>`;
+  else if (!cacheInfo.ok) html += `<p class="text-sm text-rose-600 font-bold text-center py-2">Cache פגום — ${cacheInfo.error}</p>`;
+  else {
+    html += infoRow('בדיקות שמורות', `${cacheInfo.testsCount} בדיקות`);
+    html += infoRow('נשמר', cacheInfo.savedAt);
+    html += infoRow('גיל Cache', cacheInfo.ageLabel);
+    html += infoRow('תפוגה בעוד', cacheInfo.expiresLabel);
+    html += infoRow('גודל', `${cacheInfo.sizeKb} KB`);
+  }
+  html += `</div>
+    <div class="mt-2 flex gap-2">
+      <button onclick="clearDataCache();closeDiagModal();alert('Cache נמחק.');" class="text-xs font-extrabold text-rose-600 hover:text-rose-800 underline">מחק Cache</button>
+      <span class="text-slate-300">|</span>
+      <button onclick="closeDiagModal();forceRefreshFromAirtable();" class="text-xs font-extrabold text-blue-600 hover:text-blue-800 underline">רענן מ-Airtable עכשיו</button>
+    </div>
+  </section>`;
+
+  html += `<section>
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-sm font-black text-slate-700">🔌 חיבורי Airtable</span>
+      <span class="text-xs text-slate-400 font-bold">(בדיקה בזמן אמת)</span>
+    </div>`;
+  if (apiResults.length === 0) html += `<div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-sm text-slate-500 font-bold text-center">לא הוגדרו חיבורים.</div>`;
+  for (const r of apiResults) {
+    const isActive = r.key === activeSourceKey;
+    const borderClass = r.status === 'ok' ? 'border-emerald-200' : 'border-rose-200';
+    const bgClass = r.status === 'ok' ? 'bg-emerald-50/40' : 'bg-rose-50/40';
+    html += `<div class="rounded-2xl border ${borderClass} ${bgClass} p-4 mb-3">
+      <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-black text-slate-800">${r.label}</span>
+          ${isActive ? `<span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-black border border-blue-200">פעיל כעת</span>` : ''}
+        </div>
+        <div class="flex items-center gap-2">
+          ${statusBadge(r.status === 'ok', r.status === 'ok' ? '✓ מחובר' : '✗ שגיאה')}
+          <span class="text-xs font-bold text-slate-400">${r.responseMs}ms</span>
+        </div>
+      </div>
+      ${infoRow('Token', r.maskedPat, true)}
+      ${infoRow('Base ID', r.base, true)}
+      ${infoRow('טבלה', r.table)}
+      ${r.view ? infoRow('View', r.view) : ''}
+      ${r.status === 'error' ? `<div class="mt-2 px-3 py-2 bg-rose-100 rounded-xl text-xs font-bold text-rose-700 break-all">${r.errorMsg}</div>` : ''}
+    </div>`;
+  }
+  html += `</section>`;
+
+  html += `<section>
+    <div class="text-sm font-black text-slate-700 mb-3">📊 מצב נתונים</div>
+    <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+      ${infoRow('נתונים טעונים', state.dataLoaded ? '✓ כן' : '✗ לא')}
+      ${infoRow('מקור', state.dataSource || '—')}
+      ${infoRow('בדיקות בזיכרון', `${(state.tests || []).length}`)}
+      ${infoRow('תמונות GitHub', `${(state.tests || []).filter(t => t.image && t.image.includes('raw.githubusercontent')).length}`)}
+      ${infoRow('ללא תמונה', `${(state.tests || []).filter(t => !t.image).length}`)}
+    </div>
+  </section>`;
+
+  body.innerHTML = html;
 }
 </script>
 

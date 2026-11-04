@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>ניהול מערכת בדיקות</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --primary:#155E8A; --primary-2:#3D8AB8; --primary-soft:#E8F1F7;
+  --accent:#C98A2C; --ink:#1C2321; --muted:#64748b; --line:#e2e8f0; --line-2:#cbd5e1;
+  --surface:#F6F7F4; --card:#ffffff; --danger:#dc2626; --danger-soft:#fef2f2;
+  --ok:#0d9488; --ok-soft:#ecfdf5; --warn:#b45309; --warn-soft:#fffbeb;
+  --radius:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--surface);color:var(--ink);font-family:'Heebo',system-ui,sans-serif;font-size:14px;line-height:1.5;
+  background-image:radial-gradient(1100px circle at 100% -8%,rgba(21,94,138,.06),transparent 55%)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--primary)}
+
+/* ---------- Top bar ---------- */
+.topbar{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:1500px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;margin-left:auto}
+.brand-icon{width:40px;height:40px;border-radius:12px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center}
+.brand h1{font-size:18px;font-weight:900;margin:0;letter-spacing:-.01em}
+.brand p{margin:0;font-size:12px;color:var(--muted);font-weight:500}
+.conn{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted)}
+.conn .dot{width:8px;height:8px;border-radius:50%;background:#94a3b8}
+.conn.ok{color:var(--ok);border-color:#99f6e4;background:var(--ok-soft)} .conn.ok .dot{background:var(--ok)}
+.conn.bad{color:var(--danger);border-color:#fecaca;background:var(--danger-soft)} .conn.bad .dot{background:var(--danger)}
+
+/* ---------- Buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:12px;border:1px solid var(--line);background:#fff;padding:8px 14px;font-weight:800;font-size:13px;transition:background .15s,border-color .15s,box-shadow .15s;white-space:nowrap}
+.btn:hover{background:#f8fafc;border-color:var(--line-2)}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 6px 16px -6px rgba(21,94,138,.5)}
+.btn-primary:hover{background:#0f4f76;border-color:#0f4f76}
+.btn-dark{background:#0f172a;border-color:#0f172a;color:#fff}
+.btn-dark:hover{background:#1e293b}
+.btn-danger{color:var(--danger);border-color:#fecaca;background:var(--danger-soft)}
+.btn-danger:hover{background:#fee2e2}
+.btn-ghost{border-color:transparent;background:transparent}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:10px}
+.icon-btn{width:32px;height:32px;padding:0;border-radius:10px}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+/* ---------- Layout ---------- */
+.wrap{max-width:1500px;margin:0 auto;padding:18px 16px 60px}
+.tabs{display:flex;gap:6px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:5px;width:max-content;max-width:100%;overflow-x:auto}
+.tab{border:0;background:transparent;border-radius:10px;padding:8px 16px;font-weight:800;color:var(--muted);display:inline-flex;align-items:center;gap:8px}
+.tab.active{background:var(--primary);color:#fff}
+.tab .badge{font-size:11px;background:rgba(0,0,0,.08);border-radius:999px;padding:1px 8px}
+.tab.active .badge{background:rgba(255,255,255,.22)}
+.tab .dirty{width:8px;height:8px;border-radius:50%;background:var(--accent);display:none}
+.tab.has-dirty .dirty{display:inline-block}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 1px 2px rgba(28,35,33,.04),0 10px 30px -12px rgba(21,94,138,.12)}
+.panel-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--line)}
+.panel-head h2{margin:0;font-size:17px;font-weight:900}
+.spacer{flex:1}
+
+.savebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0;padding:12px 16px;border-radius:14px;border:1px solid var(--line);background:#fff}
+.savebar.dirty{border-color:#fcd34d;background:var(--warn-soft)}
+.savebar .msg{font-weight:800}
+.savebar .chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:12px;font-weight:800;border-radius:999px;padding:2px 10px;border:1px solid var(--line);background:#fff}
+.chip.add{color:var(--ok);border-color:#99f6e4}
+.chip.edit{color:var(--primary);border-color:#bfdbfe}
+.chip.del{color:var(--danger);border-color:#fecaca}
+
+/* ---------- Filters ---------- */
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);background:#fbfcfd}
+.input,.select,.textarea{width:100%;border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 12px;outline:none;transition:border-color .15s,box-shadow .15s}
+.input:focus,.select:focus,.textarea:focus{border-color:var(--primary);box-shadow:0 0 0 4px rgba(21,94,138,.12)}
+.textarea{min-height:90px;resize:vertical;line-height:1.6}
+.search{position:relative;flex:1 1 260px;min-width:200px}
+.search .input{padding-right:36px}
+.search svg{position:absolute;right:11px;top:50%;transform:translateY(-50%);color:#94a3b8}
+.filters .select{width:auto;min-width:140px}
+.check{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:13px;color:var(--muted);user-select:none}
+
+/* ---------- Table ---------- */
+.table-wrap{overflow:auto;max-height:calc(100vh - 330px);min-height:300px}
+table.grid{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+.grid th{position:sticky;top:0;z-index:2;background:#f1f5f9;text-align:right;font-weight:800;color:#334155;padding:9px 10px;border-bottom:1px solid var(--line-2);white-space:nowrap;cursor:pointer;user-select:none}
+.grid th.nosort{cursor:default}
+.grid th .arrow{color:var(--primary);font-size:11px}
+.grid td{padding:8px 10px;border-bottom:1px solid #eef2f6;vertical-align:middle}
+.grid tbody tr:hover td{background:#f8fbfd}
+.grid tr.st-new td{background:#f0fdf9}
+.grid tr.st-edit td{background:#f2f7fc}
+.grid tr.st-new td:first-child{box-shadow:inset -3px 0 0 var(--ok)}
+.grid tr.st-edit td:first-child{box-shadow:inset -3px 0 0 var(--primary)}
+.grid .name{font-weight:800;color:#0f172a}
+.grid .sub{color:var(--muted);font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grid .num{font-variant-numeric:tabular-nums;color:#475569}
+.grid .actions{white-space:nowrap;text-align:left}
+.kupa-tag{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:1px 9px;background:var(--primary-soft);color:var(--primary)}
+.swatch{display:inline-block;width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.15);vertical-align:-1px;margin-left:5px}
+.warn-ic{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;background:var(--warn-soft);color:var(--warn);border:1px solid #fcd34d;font-size:11px;font-weight:900;margin-left:4px;cursor:help}
+.instr-ic{color:var(--warn);font-weight:900;margin-left:3px}
+.empty{padding:50px 20px;text-align:center;color:var(--muted);font-weight:700}
+.foot-info{padding:10px 16px;color:var(--muted);font-size:12px;font-weight:700;border-top:1px solid var(--line)}
+
+/* ---------- Cards (messages / final) ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;padding:16px}
+.mcard{border:1px solid var(--line);border-radius:14px;padding:14px;background:#fff;display:flex;flex-direction:column;gap:8px;position:relative}
+.mcard.st-new{border-color:#99f6e4;background:#f8fffd}
+.mcard.st-edit{border-color:#bfdbfe;background:#f8fbff}
+.mcard h3{margin:0;font-size:15px;font-weight:900}
+.mcard .body{white-space:pre-line;color:#475569;font-size:13px;max-height:150px;overflow:auto;background:#f8fafc;border-radius:10px;padding:10px;border:1px solid #eef2f6}
+.mcard .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pill{font-size:11px;font-weight:900;border-radius:999px;padding:2px 9px;border:1px solid var(--line)}
+.pill.on{background:var(--ok-soft);color:var(--ok);border-color:#99f6e4}
+.pill.off{background:#f1f5f9;color:var(--muted)}
+.tagchip{display:inline-flex;align-items:center;gap:4px;background:var(--primary-soft);color:var(--primary);border:1px solid #c7dbea;border-radius:999px;padding:3px 6px 3px 10px;font-weight:800;font-size:12px;line-height:1.3}
+.tagchip button{border:0;background:rgba(21,94,138,.12);color:var(--primary);width:18px;height:18px;border-radius:50%;padding:0;font-size:11px;line-height:18px}
+.tagchip button:hover{background:var(--danger);color:#fff}
+.tagchip.sm{padding:1px 8px;font-size:11px;background:#f1f5f9;color:#475569;border-color:var(--line)}
+.multi-chips{display:flex;flex-wrap:wrap;gap:6px;min-height:6px}
+.multi-add{display:flex;gap:6px}
+.peek{border:1px solid var(--line);border-radius:12px;background:#fbfcfd;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.peek-head{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:#334155}
+.peek-group-title{font-size:12px;font-weight:900;color:var(--primary);margin-bottom:5px}
+.peek-list{display:flex;flex-wrap:wrap;gap:5px}
+.peek-item{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;background:#fff;border:1px solid var(--line);border-radius:8px;padding:2px 8px}
+.peek-item .k{color:var(--muted);font-weight:600;font-size:11px}
+.peek-empty{font-size:12px;color:var(--muted);font-weight:600}
+.glayout{display:grid;grid-template-columns:270px minmax(0,1fr) minmax(0,1.15fr);gap:14px;align-items:start}
+.gcol{display:flex;flex-direction:column;height:calc(100vh - 230px);min-height:480px;overflow:hidden}
+.gcol .scroll{overflow:auto;flex:1}
+.seg{display:flex;background:#f1f5f9;border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;background:transparent;border-radius:9px;padding:7px 4px;font-weight:800;font-size:12px;color:var(--muted)}
+.seg button.on{background:#fff;color:var(--primary);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.gitem{display:flex;align-items:center;gap:8px;width:100%;text-align:right;border:0;background:transparent;padding:9px 12px;border-radius:10px;font-weight:700}
+.gitem:hover{background:#f8fafc}
+.gitem.on{background:var(--primary-soft);color:var(--primary);font-weight:900}
+.gitem .gname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.gitem .n{margin-inline-start:auto;font-size:11px;font-weight:800;background:#f1f5f9;color:var(--muted);border-radius:999px;padding:1px 8px}
+.gitem.on .n{background:var(--primary);color:#fff}
+.gitem.zero .n{background:#fef3c7;color:var(--warn)}
+.lrow{display:flex;align-items:center;gap:8px;padding:7px 14px;border-bottom:1px solid #f1f5f9;font-size:13px;cursor:default}
+.lrow:hover{background:#f8fbfd}
+.lrow .nm{font-weight:800;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lrow .meta{color:var(--muted);font-size:12px;white-space:nowrap}
+.lrow.pick{cursor:pointer}
+.lrow.checked{background:#eef6fc}
+.lrow input[type=checkbox]{width:16px;height:16px;accent-color:var(--primary)}
+.gbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);background:#fbfcfd}
+.gbar .select,.gbar .input{width:auto;flex:1 1 140px;min-width:120px;padding:7px 10px}
+.ghead{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.ghead h2{margin:0;font-size:17px;font-weight:900;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.kchip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:800;color:#475569}
+.kchip.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.gempty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-weight:700;text-align:center;padding:30px}
+@media(max-width:1100px){.glayout{grid-template-columns:1fr}.gcol{height:auto;min-height:0}.gcol .scroll{max-height:440px}}
+.thumb{width:100%;height:170px;border-radius:10px;background:#f1f5f9;border:1px solid #eef2f6;object-fit:contain}
+
+/* ---------- Modal ---------- */
+.backdrop{position:fixed;inset:0;background:rgba(20,26,24,.55);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:28px 14px;z-index:60;overflow:auto}
+.backdrop.open{display:flex}
+.modal{width:100%;max-width:860px;background:#fff;border-radius:20px;box-shadow:0 30px 70px rgba(15,23,42,.3);overflow:hidden}
+.modal.sm{max-width:560px}
+.modal-head{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.modal-head h3{margin:0;font-size:17px;font-weight:900}
+.modal-head p{margin:2px 0 0;font-size:12px;color:var(--muted)}
+.modal-body{padding:18px 20px;max-height:calc(100vh - 210px);overflow:auto}
+.modal-foot{display:flex;gap:8px;justify-content:flex-start;flex-direction:row-reverse;padding:14px 20px;border-top:1px solid var(--line);background:#fbfcfd}
+.section-title{font-size:12px;font-weight:900;color:var(--primary);letter-spacing:.02em;margin:14px 0 8px;display:flex;align-items:center;gap:8px}
+.section-title:first-child{margin-top:0}
+.section-title::after{content:'';flex:1;height:1px;background:var(--line)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field.span2{grid-column:1 / -1}
+.field label{font-size:12px;font-weight:800;color:#334155}
+.field label .req{color:var(--danger)}
+.field .hint{font-size:11px;color:var(--muted)}
+.color-row{display:flex;gap:8px;align-items:center}
+.color-row .big-swatch{width:38px;height:38px;border-radius:10px;border:1px solid var(--line-2);flex:none}
+.img-row{display:flex;gap:10px;align-items:flex-start}
+.img-prev{width:84px;height:84px;border-radius:12px;border:1px solid var(--line);background:#f8fafc;object-fit:contain;flex:none}
+.img-row .stack{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
+.note{font-size:12px;border-radius:12px;padding:10px 12px;line-height:1.6}
+.note.info{background:var(--primary-soft);color:#0f4f76}
+.note.warn{background:var(--warn-soft);color:var(--warn);border:1px solid #fde68a}
+.note code{background:rgba(0,0,0,.06);padding:1px 5px;border-radius:5px;direction:ltr;display:inline-block}
+
+/* ---------- Toast ---------- */
+.toasts{position:fixed;bottom:18px;left:18px;display:flex;flex-direction:column;gap:8px;z-index:90}
+.toast{background:#0f172a;color:#fff;padding:10px 14px;border-radius:12px;font-weight:700;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:380px;animation:tin .25s ease}
+.toast.ok{background:var(--ok)} .toast.err{background:var(--danger)}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ---------- Loading / file picker ---------- */
+.loader{display:flex;flex-direction:column;align-items:center;gap:14px;padding:70px 20px;color:var(--muted);font-weight:800}
+.spin{width:46px;height:46px;border-radius:50%;border:5px solid rgba(21,94,138,.15);border-top-color:var(--primary);animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.drop{border:2px dashed var(--line-2);border-radius:16px;padding:26px;text-align:center;background:#fff}
+
+@media (max-width:720px){
+  .fgrid{grid-template-columns:1fr}
+  .brand{margin-left:0;width:100%}
+  .table-wrap{max-height:none}
+  .grid .sub{max-width:140px}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.3 4.3c.4-1.8 3-1.8 3.4 0a1.7 1.7 0 002.6 1.1c1.5-.9 3.3.8 2.4 2.4a1.7 1.7 0 001 2.5c1.8.5 1.8 3 0 3.5a1.7 1.7 0 00-1 2.5c.9 1.6-.9 3.3-2.4 2.4a1.7 1.7 0 00-2.6 1.1c-.4 1.8-3 1.8-3.4 0a1.7 1.7 0 00-2.6-1.1c-1.5.9-3.3-.8-2.4-2.4a1.7 1.7 0 00-1-2.5c-1.8-.5-1.8-3 0-3.5a1.7 1.7 0 001-2.5c-.9-1.6.9-3.3 2.4-2.4a1.7 1.7 0 002.6-1.1z"/><circle cx="12" cy="12" r="3"/></svg>
+      </div>
+      <div>
+        <h1>ניהול מערכת בדיקות ומבחנות</h1>
+        <p>הוספה, עריכה ומחיקה של בדיקות, הודעות ומסך סיום</p>
+      </div>
+    </div>
+    <span id="connPill" class="conn"><span class="dot"></span><span id="connText">לא מחובר ל-GitHub</span></span>
+    <a class="btn" href="index.html" target="_blank" rel="noopener">פתח את המערכת ↗</a>
+    <button class="btn btn-dark" onclick="openSettings()">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.7 5.8L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.6a1 1 0 01.3-.7l6-6A6 6 0 1121 9z"/></svg>
+      הגדרות GitHub
+    </button>
+  </div>
+</header>
+
+<main class="wrap">
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="tests" onclick="switchTab('tests')"><span class="dirty"></span>בדיקות <span class="badge" id="cnt-tests">0</span></button>
+    <button class="tab" data-tab="groups" onclick="switchTab('groups')"><span class="dirty"></span>רוטינות וקבוצות <span class="badge" id="cnt-groups">0</span></button>
+    <button class="tab" data-tab="notes" onclick="switchTab('notes')"><span class="dirty"></span>הערות <span class="badge" id="cnt-notes">0</span></button>
+    <button class="tab" data-tab="messages" onclick="switchTab('messages')"><span class="dirty"></span>הודעות חשובות <span class="badge" id="cnt-messages">0</span></button>
+    <button class="tab" data-tab="final" onclick="switchTab('final')"><span class="dirty"></span>מסך סיום <span class="badge" id="cnt-final">0</span></button>
+  </nav>
+
+  <div id="saveBar" class="savebar"></div>
+  <div id="view"></div>
+</main>
+
+<!-- ===== Editor modal ===== -->
+<div id="editorModal" class="backdrop" onmousedown="if(event.target===this)closeModal('editorModal')">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <div><h3 id="edTitle">עריכה</h3><p id="edSub"></p></div>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost icon-btn" onclick="closeModal('editorModal')" aria-label="סגירה">✕</button>
+    </div>
+    <div class="modal-body" id="edBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="saveEditor()">שמור שינויים</button>
+      <button class="btn" onclick="closeModal('editorModal')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Settings modal ===== -->
+<div id="settingsModal" class="backdrop" onmousedown="if(event.target===this)closeModal('settingsModal')">
+  <div class="modal sm" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <div><h3>הגדרות חיבור ל-GitHub</h3><p>נשמר רק בדפדפן הזה (localStorage). לעולם אל תכניס את ה-Token לקובץ בריפו.</p></div>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost icon-btn" onclick="closeModal('settingsModal')" aria-label="סגירה">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fgrid">
+        <div class="field"><label>שם משתמש / ארגון (Owner)</label><input id="s_owner" class="input" dir="ltr"></div>
+        <div class="field"><label>שם הריפו (Repository)</label><input id="s_repo" class="input" dir="ltr"></div>
+        <div class="field"><label>ענף (Branch)</label><input id="s_branch" class="input" dir="ltr"></div>
+        <div class="field"><label>תיקיית תמונות</label><input id="s_images" class="input" dir="ltr"></div>
+        <div class="field span2">
+          <label>Personal Access Token</label>
+          <input id="s_token" class="input" type="password" dir="ltr" placeholder="github_pat_...">
+          <span class="hint">בלי Token אפשר לצפות ולהוריד קבצי CSV, אבל לא לשמור ישירות ל-GitHub.</span>
+        </div>
+      </div>
+      <div class="section-title" style="margin-top:18px">קוד כניסה לעמוד הניהול</div>
+      <div class="fgrid">
+        <div class="field"><label>קוד חדש</label><input id="s_code1" class="input" type="password" dir="ltr" autocomplete="new-password"></div>
+        <div class="field"><label>הקלד שוב</label><input id="s_code2" class="input" type="password" dir="ltr" autocomplete="new-password"></div>
+        <div class="field span2">
+          <span class="hint" id="s_codeState"></span>
+          <label class="check" id="s_codeRemoveWrap"><input type="checkbox" id="s_codeRemove"> הסר את קוד הכניסה</label>
+        </div>
+      </div>
+      <details style="margin-top:14px">
+        <summary style="cursor:pointer;font-weight:800">נתיבי קבצים בריפו</summary>
+        <div class="fgrid" style="margin-top:10px">
+          <div class="field"><label>בדיקות</label><input id="s_p_tests" class="input" dir="ltr"></div>
+          <div class="field"><label>הודעות חשובות</label><input id="s_p_messages" class="input" dir="ltr"></div>
+          <div class="field"><label>מסך סיום</label><input id="s_p_final" class="input" dir="ltr"></div>
+        </div>
+      </details>
+      <div class="note info" style="margin-top:14px">
+        <b>איך יוצרים Token:</b> ב-GitHub ← Settings ← Developer settings ← Personal access tokens ← <b>Fine-grained tokens</b> ← Generate new token.
+        תחת <b>Repository access</b> בחר רק את הריפו <code id="s_repoHint">2026</code>, ותחת <b>Permissions</b> ← <b>Contents</b> בחר <b>Read and write</b>. מומלץ להגדיר תוקף.
+      </div>
+      <div id="s_result" style="margin-top:12px"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="saveSettings()">שמור והתחבר</button>
+      <button class="btn" onclick="testConnection()">בדוק חיבור</button>
+      <span class="spacer"></span>
+      <button class="btn btn-danger" onclick="forgetToken()">מחק Token מהדפדפן</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Bulk rename modal ===== -->
+<div id="bulkModal" class="backdrop" onmousedown="if(event.target===this)closeModal('bulkModal')">
+  <div class="modal sm" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <div><h3>החלפת ערך בכל הבדיקות</h3><p>לדוגמה: שינוי שם מעבדה או איחוד קבוצת מבחנה</p></div>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost icon-btn" onclick="closeModal('bulkModal')" aria-label="סגירה">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fgrid">
+        <div class="field span2"><label>עמודה</label><select id="b_col" class="select" onchange="fillBulkValues()"></select></div>
+        <div class="field span2"><label>הערך הנוכחי</label><select id="b_from" class="select" onchange="updateBulkCount()"></select></div>
+        <div class="field span2"><label>להחליף ל־</label><input id="b_to" class="input" list="b_to_list"><datalist id="b_to_list"></datalist></div>
+        <div class="field span2"><label class="check"><input type="checkbox" id="b_onlyFiltered" onchange="updateBulkCount()"> רק בשורות שמוצגות כרגע לפי הסינון</label></div>
+      </div>
+      <div id="b_count" class="note info" style="margin-top:12px"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="applyBulk()">החלף</button>
+      <button class="btn" onclick="closeModal('bulkModal')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== New group modal ===== -->
+<div id="groupModal" class="backdrop" onmousedown="if(event.target===this)closeModal('groupModal')">
+  <div class="modal sm" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <div><h3 id="gmTitle">קבוצה חדשה</h3><p>רוטינה, סוג בדיקה או קבוצת מבחנה – אפשר להתחיל ריקה או להעתיק בדיקות מקבוצה קיימת</p></div>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost icon-btn" onclick="closeModal('groupModal')" aria-label="סגירה">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fgrid">
+        <div class="field span2"><label>סוג</label>
+          <select id="gm_kind" class="select" onchange="gmPreview()">
+            <option value="r">רוטינה</option><option value="t">סוג בדיקה / קבוצה (test type)</option><option value="g">קבוצת מבחנה (tube_group)</option><option value="n">הערה</option>
+          </select></div>
+        <div class="field span2"><label>שם <span class="req">*</span></label><input id="gm_name" class="input" placeholder="לדוגמה: רוטינה קבלה" oninput="gmPreview()"></div>
+        <div class="field span2"><label>להעתיק בדיקות מתוך</label><select id="gm_src" class="select" onchange="gmPreview()"></select></div>
+        <div class="field span2"><label>רק מקופה</label>
+          <select id="gm_kupa" class="select" onchange="gmPreview()"><option value="">כל הקופות</option><option>כללית</option><option>מאוחדת</option><option>מכבי</option><option>לאומית</option><option>אחר</option></select></div>
+      </div>
+      <div id="gm_preview" class="note info" style="margin-top:12px"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" id="gm_create" onclick="createGroup()">צור קבוצה</button>
+      <button class="btn" onclick="closeModal('groupModal')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="hiddenCsvInput" accept=".csv,text/csv" multiple hidden>
+<input type="file" id="hiddenImgInput" accept="image/*" hidden>
+<div class="toasts" id="toasts"></div>
+
+<!-- ===== מסך כניסה בקוד ===== -->
+<div id="lockScreen" style="display:none;position:fixed;inset:0;z-index:100;background:var(--surface);align-items:center;justify-content:center;padding:16px">
+  <form class="card" style="width:100%;max-width:380px;padding:26px;display:flex;flex-direction:column;gap:12px;text-align:center" onsubmit="event.preventDefault();tryUnlock()">
+    <div class="brand-icon" style="margin:0 auto;width:52px;height:52px;border-radius:16px">
+      <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path stroke-linecap="round" d="M8 11V7a4 4 0 118 0v4"/></svg>
+    </div>
+    <h2 style="margin:0;font-size:19px;font-weight:900">עמוד ניהול</h2>
+    <div style="color:var(--muted);font-weight:600;font-size:13px">הקלד את קוד הכניסה</div>
+    <input id="lockCode" class="input" type="password" inputmode="numeric" autocomplete="current-password" style="text-align:center;font-size:20px;font-weight:900;letter-spacing:.2em" dir="ltr">
+    <label class="check" style="justify-content:center"><input type="checkbox" id="lockRemember"> זכור במחשב הזה</label>
+    <div id="lockErr" style="color:var(--danger);font-weight:800;font-size:13px;min-height:18px"></div>
+    <button class="btn btn-primary" type="submit">כניסה</button>
+  </form>
+</div>
+
+<script>
+/* ============================================================
+   קבועים — תואמים את index.html
+   ============================================================ */
+const KUPOT = ['כללית','מאוחדת','מכבי','לאומית','אחר'];
+const TUBE_COLORS = [
+  ['lavender','סגולה','#a78bfa'],['green','ירוקה','#22c55e'],['yellow','צהובה','#eab308'],
+  ['blue','כחולה','#3b82f6'],['red','אדומה','#ef4444'],['grey','אפורה','#94a3b8'],
+  ['black','שחורה','#0f172a'],['orange','כתומה','#f97316'],['pink','ורודה','#ec4899'],
+  ['brown','חומה','#a16207'],['white','לבנה','#f1f5f9']
+];
+const COLOR_HEX = Object.fromEntries(TUBE_COLORS.map(c=>[c[0],c[2]]));
+const COLOR_HE = Object.fromEntries(TUBE_COLORS.map(c=>[c[0],c[1]]));
+// מפה מקוצרת של זיהוי צבעים (כמו ב-index.html) כדי להתריע על צבע שהמערכת לא תזהה
+const COLOR_MAP = {lavender:'lavender',purple:'lavender',violet:'lavender',lilac:'lavender',green:'green',yellow:'yellow',gold:'yellow',blue:'blue',navy:'blue',turquoise:'blue',cyan:'blue',red:'red',crimson:'red',maroon:'red',grey:'grey',gray:'grey',silver:'grey',black:'black',orange:'orange',pink:'pink',rose:'pink',magenta:'pink',brown:'brown',tan:'brown',beige:'brown',white:'white',ivory:'white',cream:'white',pu:'lavender',lav:'lavender',gn:'green',grn:'green',yl:'yellow',bl:'blue',rd:'red',gy:'grey',gr:'grey',bk:'black',or:'orange',pk:'pink',br:'brown','סגול':'lavender','סגולה':'lavender','ירוק':'green','ירוקה':'green','צהוב':'yellow','צהובה':'yellow','כחול':'blue','כחולה':'blue','תכלת':'blue','אדום':'red','אדומה':'red','אפור':'grey','אפורה':'grey','שחור':'black','שחורה':'black','כתום':'orange','כתומה':'orange','ורוד':'pink','ורודה':'pink','חום':'brown','חומה':'brown','לבן':'white','לבנה':'white'};
+
+const DEFAULT_HEADERS = {
+  tests: ['שם בדיקה','קופת חולים','קוד בדיקה','test type','תמונה בגט הב','בדיקות רוטינה','תיאור','הוראות מיוחדות','סוג המבחנה','צבע מבחנה','מעבדה','כלל מבחנה','כמות מבחנות','tube_group','סדר הדפסה'],
+  messages: ['נושא הודעה','תוכן הודעה','לפרסום?'],
+  final: ['כותרת','שם קובץ תמונה','תאריך','פעיל'],
+  colors: ['סוג','שם','צבע']
+};
+const FILE_LABELS = { tests:'בדיקות', messages:'הודעות חשובות', final:'מסך סיום', colors:'צבעי רוטינות' };
+
+// הגדרת שדות הטופס לכל עמודה (עמודות לא מוכרות יוצגו כ"שדות נוספים")
+const FIELD_DEFS = {
+  tests: {
+    'שם בדיקה':     {sec:'פרטי הבדיקה', type:'text', req:true, span:2},
+    'קופת חולים':   {sec:'פרטי הבדיקה', type:'select', options:KUPOT.map(k=>[k,k]), req:true},
+    'קוד בדיקה':    {sec:'פרטי הבדיקה', type:'text', ltr:true},
+    'מעבדה':        {sec:'פרטי הבדיקה', type:'list', hint:'קובע את חלוקת הטופס המודפס לפי מעבדה'},
+    'סדר הדפסה':    {sec:'פרטי הבדיקה', type:'number', hint:'מספר נמוך = מופיע קודם בטופס'},
+    'בדיקות רוטינה':{sec:'רוטינות וקבוצות', label:'רוטינות', type:'multi', span:2, hint:'אפשר כמה רוטינות. הבדיקה תופיע תחת כל אחת מהן במסנן "רוטינה" בקטלוג'},
+    'test type':    {sec:'רוטינות וקבוצות', label:'סוג בדיקה / קבוצה (test type)', type:'multi', span:2, hint:'אפשר כמה קבוצות. הבדיקה תופיע תחת כל אחת מהן במסנן "סוג בדיקה" בקטלוג'},
+    'צבע מבחנה':    {sec:'מבחנה', type:'color', req:true},
+    'סוג המבחנה':   {sec:'מבחנה', type:'list'},
+    'כלל מבחנה':    {sec:'מבחנה', type:'select', options:[['shared','משותפת – מבחנה אחת לכמה בדיקות (shared)'],['per_test','נפרדת לכל בדיקה (per_test)']]},
+    'כמות מבחנות':  {sec:'מבחנה', type:'number', min:1},
+    'tube_group':   {sec:'מבחנה', label:'קבוצת מבחנה (tube_group)', type:'list', peek:true, span:2, hint:'בדיקות עם אותה קבוצה מתאחדות למבחנה אחת'},
+    'תמונה בגט הב': {sec:'מבחנה', label:'תמונת מבחנה (שם קובץ בתיקיית images)', type:'image', span:2},
+    'תיאור':        {sec:'טקסטים', type:'textarea', span:2},
+    'הוראות מיוחדות':{sec:'טקסטים', type:'textarea', span:2, hint:'כל שורה היא הערה נפרדת. אפשר לנהל הערות לכמה בדיקות יחד בלשונית "הערות".'}
+  },
+  messages: {
+    'נושא הודעה': {sec:'הודעה', type:'text', req:true, span:2},
+    'תוכן הודעה': {sec:'הודעה', type:'textarea', span:2, rows:12, hint:'ירידות שורה נשמרות ומוצגות כמו שהן במסך הבית'},
+    'לפרסום?':    {sec:'הודעה', type:'select', options:[['כן','כן – מוצג במסך הבית'],['לא','לא – מוסתר']]}
+  },
+  final: {
+    'כותרת':          {sec:'מסך סיום', type:'text', span:2},
+    'שם קובץ תמונה':  {sec:'מסך סיום', type:'image', span:2},
+    'תאריך':          {sec:'מסך סיום', type:'date', hint:'אם יש כמה פעילים – מוצג החדש ביותר'},
+    'פעיל':           {sec:'מסך סיום', type:'select', options:[['כן','כן'],['לא','לא']]}
+  }
+};
+
+/* ============================================================
+   מצב
+   ============================================================ */
+const CFG_KEY = 'labtests_admin_cfg_v1';
+let cfg = {
+  owner:'bdikotdm-pixel', repo:'2026', branch:'main', token:'', imagesDir:'images',
+  paths:{ tests:'data/tests.csv', messages:'data/messages.csv', final:'data/final-slide.csv', colors:'data/group-colors.csv' }
+};
+const files = {
+  tests:   { headers:[], rows:[], deleted:0, sha:null, source:'', loaded:false },
+  messages:{ headers:[], rows:[], deleted:0, sha:null, source:'', loaded:false },
+  final:   { headers:[], rows:[], deleted:0, sha:null, source:'', loaded:false },
+  colors:  { headers:[], rows:[], deleted:0, sha:null, source:'', loaded:false }  // צבעי כפתורי רוטינה / סוג בדיקה
+};
+let ui = { tab:'tests', loading:true, q:'', kupa:'', lab:'', color:'', group:'', onlyIssues:false, onlyChanged:false, sort:{col:'סדר הדפסה', dir:1} };
+let imageList = [];
+let editing = null; // {file, id, isNew, afterId}
+let nextId = 1;
+
+/* ============================================================
+   עזרים
+   ============================================================ */
+const norm = s => (s ?? '').toString().trim();
+const normKey = s => norm(s).toLowerCase().replace(/[֑-ׇ]/g,'').replace(/[^\p{L}\p{N}]+/gu,'');
+const esc = s => (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const $ = id => document.getElementById(id);
+
+function toast(msg, kind=''){
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind; el.textContent = msg;
+  $('toasts').appendChild(el);
+  setTimeout(()=>el.remove(), kind==='err' ? 7000 : 3500);
+}
+
+function colorCode(raw){
+  const k = normKey(raw);
+  if (!k) return '';
+  if (COLOR_MAP[k]) return COLOR_MAP[k];
+  for (const key of Object.keys(COLOR_MAP)) if (k.includes(normKey(key))) return COLOR_MAP[key];
+  return '';
+}
+
+function imageUrl(name){
+  const s = norm(name);
+  if (!s) return '';
+  if (/^https?:\/\//i.test(s)) return s;
+  return `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/${cfg.branch}/${cfg.imagesDir}/${encodeURIComponent(s)}`;
+}
+
+// עמודות שיכולות להכיל כמה ערכים (מופרדים בפסיק) – כך גם index.html קורא אותן
+const MULTI_COLS = ['בדיקות רוטינה','test type'];
+// הוראות מיוחדות: כל שורה = הערה נפרדת (כך גם index.html מציג אותן)
+const NOTES_COL = 'הוראות מיוחדות';
+const splitNotes = v => String(v ?? '').split(/\r?\n+/).map(x=>x.trim()).filter(Boolean);
+const joinNotes = arr => arr.join('\n');
+const isMulti = (file, name) => file==='tests' && MULTI_COLS.includes(norm(name));
+const splitMulti = v => norm(v).split(/\s*[;|,\n]\s*/).map(norm).filter(Boolean);
+const joinMulti = arr => arr.join(', ');
+
+function hdr(file, name){ // מוצא את שם העמודה בפועל (סובלני לרווחים)
+  return files[file].headers.find(h => norm(h) === name) ?? null;
+}
+function val(file, row, name){ const h = hdr(file, name); return h ? (row.data[h] ?? '') : ''; }
+
+function rowStatus(r){ if (!r.orig) return 'new'; return JSON.stringify(r.data) !== r.orig ? 'edit' : ''; }
+function fileStats(key){
+  const f = files[key]; let add=0, edit=0;
+  f.rows.forEach(r => { const s=rowStatus(r); if(s==='new')add++; else if(s==='edit')edit++; });
+  return {add, edit, del:f.deleted, dirty: add+edit+f.deleted>0};
+}
+
+/* ============================================================
+   CSV — אותו פרסר כמו index.html (פסיק / נקודה-פסיק / טאב)
+   ============================================================ */
+function parseCSV(text){
+  const rows=[]; let row=[], cur='', q=false;
+  for (let i=0;i<text.length;i++){
+    const ch=text[i], nx=text[i+1];
+    if (ch==='"'){ if(q && nx==='"'){cur+='"';i++;} else q=!q; }
+    else if (!q && (ch===','||ch===';'||ch==='\t')){ row.push(cur); cur=''; }
+    else if (!q && ch==='\n'){ row.push(cur); rows.push(row); row=[]; cur=''; }
+    else if (!q && ch==='\r'){}
+    else cur+=ch;
+  }
+  if (cur.length || row.length){ row.push(cur); rows.push(row); }
+  while (rows.length && rows[rows.length-1].every(c=>norm(c)==='')) rows.pop();
+  return rows;
+}
+function csvCell(v){
+  const s = (v ?? '').toString();
+  return /[",;\t\r\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+}
+function buildCSV(key){
+  const f = files[key];
+  const lines = [f.headers.map(csvCell).join(',')];
+  f.rows.forEach(r => lines.push(f.headers.map(h => csvCell(r.data[h] ?? '')).join(',')));
+  const eol = f.eol || '\r\n';
+  return '\uFEFF' + lines.join(eol) + eol; // BOM כדי שאקסל יפתח עברית נכון; שומרים את סוג ירידת השורה המקורי
+}
+function loadIntoFile(key, text, source, sha=null){
+  text = (text||'').replace(/^\uFEFF/,'');
+  const rows = parseCSV(text);
+  const f = files[key];
+  f.eol = /\r\n/.test(text) ? '\r\n' : (text.includes('\n') ? '\n' : '\r\n');
+  f.headers = rows.length ? rows[0].map(h=>h.replace(/^\uFEFF/,'')) : [...DEFAULT_HEADERS[key]];
+  if (!f.headers.some(h=>norm(h))) f.headers = [...DEFAULT_HEADERS[key]];
+  f.rows = rows.slice(1).filter(r=>r.some(c=>norm(c))).map(cells=>{
+    const data = {}; f.headers.forEach((h,i)=> data[h] = cells[i] ?? '');
+    return { id: nextId++, data, orig: JSON.stringify(data) };
+  });
+  f.deleted = 0; f.sha = sha; f.source = source; f.loaded = true;
+}
+function detectFileKey(headers){
+  const H = headers.map(norm);
+  if (H.includes('שם בדיקה')) return 'tests';
+  if (H.includes('נושא הודעה') || H.includes('תוכן הודעה')) return 'messages';
+  if (H.includes('צבע') && H.includes('שם') && H.includes('סוג')) return 'colors';
+  if (H.includes('שם קובץ תמונה') || (H.includes('כותרת') && H.includes('פעיל'))) return 'final';
+  return null;
+}
+
+/* ============================================================
+   GitHub API
+   ============================================================ */
+const hasToken = () => !!norm(cfg.token);
+const encPath = p => p.split('/').map(encodeURIComponent).join('/');
+async function gh(path, opts={}, auth=true){
+  const headers = { 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28', ...(opts.headers||{}) };
+  if (auth && hasToken()) headers.Authorization = 'Bearer ' + norm(cfg.token);
+  const res = await fetch('https://api.github.com' + path, { ...opts, headers, cache:'no-store' });
+  if (!res.ok){
+    let msg = ''; try { msg = (await res.json()).message || ''; } catch(e){}
+    const err = new Error(ghErrorText(res.status, msg)); err.status = res.status; throw err;
+  }
+  return res.status === 204 ? null : res.json();
+}
+function ghErrorText(status, msg){
+  if (status===401) return 'ה-Token לא תקין או שפג תוקפו (401).';
+  if (status===403) return 'אין הרשאה. ודא שה-Token כולל Contents: Read and write לריפו הזה (403). ' + msg;
+  if (status===404) return 'לא נמצא – בדוק Owner / Repo / Branch / נתיב הקובץ (404).';
+  if (status===409) return 'הקובץ השתנה ב-GitHub מאז שנטען (409). טען מחדש ונסה שוב.';
+  if (status===422) return 'GitHub דחה את הבקשה (422). ' + msg;
+  return `שגיאת GitHub (${status}). ${msg}`;
+}
+function b64ToText(b64){
+  const bin = atob(b64.replace(/\s/g,''));
+  const bytes = Uint8Array.from(bin, c=>c.charCodeAt(0));
+  return new TextDecoder('utf-8').decode(bytes);
+}
+function bytesToB64(bytes){
+  let bin=''; const CH=0x8000;
+  for (let i=0;i<bytes.length;i+=CH) bin += String.fromCharCode.apply(null, bytes.subarray(i,i+CH));
+  return btoa(bin);
+}
+async function ghGetFile(path){
+  const d = await gh(`/repos/${cfg.owner}/${cfg.repo}/contents/${encPath(path)}?ref=${encodeURIComponent(cfg.branch)}`);
+  return { sha:d.sha, text: d.content ? b64ToText(d.content) : '' };
+}
+async function ghGetSha(path){
+  try { return (await gh(`/repos/${cfg.owner}/${cfg.repo}/contents/${encPath(path)}?ref=${encodeURIComponent(cfg.branch)}`)).sha; }
+  catch(e){ if (e.status===404) return null; throw e; }
+}
+async function ghPutFile(path, b64, sha, message){
+  const body = { message, content:b64, branch:cfg.branch };
+  if (sha) body.sha = sha;
+  const d = await gh(`/repos/${cfg.owner}/${cfg.repo}/contents/${encPath(path)}`, { method:'PUT', body:JSON.stringify(body), headers:{'Content-Type':'application/json'} });
+  return d.content.sha;
+}
+
+/* ============================================================
+   טעינה
+   ============================================================ */
+async function loadAll(){
+  ui.loading = true; render();
+  const errors = [];
+  for (const key of Object.keys(files)){
+    const path = cfg.paths[key];
+    try {
+      if (hasToken()){
+        const {sha, text} = await ghGetFile(path);
+        loadIntoFile(key, text, 'GitHub', sha);
+        continue;
+      }
+      throw new Error('no token');
+    } catch(e){
+      if (hasToken() && e.status && e.status !== 404) errors.push(`${FILE_LABELS[key]}: ${e.message}`);
+      if (hasToken() && e.status === 404){ loadIntoFile(key, '', 'חדש (לא קיים בריפו)'); continue; }
+    }
+    // בלי Token – קריאה רגילה מהאתר (עובד ב-GitHub Pages)
+    try {
+      const res = await fetch(path + '?t=' + Date.now(), { cache:'no-store' });
+      if (!res.ok) throw new Error(res.status);
+      loadIntoFile(key, await res.text(), 'האתר (קריאה בלבד)');
+    } catch(e){ /* יטופל במסך בחירת קבצים */ }
+  }
+  if (!files.colors.loaded) loadIntoFile('colors', '', 'חדש'); // הקובץ נוצר בשמירה הראשונה
+  ui.loading = false;
+  errors.forEach(m => toast(m, 'err'));
+  refreshImages();
+  render();
+}
+
+async function refreshImages(){
+  try {
+    const list = await gh(`/repos/${cfg.owner}/${cfg.repo}/contents/${encPath(cfg.imagesDir)}?ref=${encodeURIComponent(cfg.branch)}`, {}, hasToken());
+    imageList = (list||[]).filter(x=>x.type==='file').map(x=>x.name).sort((a,b)=>a.localeCompare(b,'he'));
+  } catch(e){
+    // אם אין גישה לרשימה – משתמשים בשמות הקיימים בנתונים
+    const s = new Set();
+    files.tests.rows.forEach(r=>{ const v=norm(val('tests',r,'תמונה בגט הב')); if(v) s.add(v); });
+    files.final.rows.forEach(r=>{ const v=norm(val('final',r,'שם קובץ תמונה')); if(v) s.add(v); });
+    imageList = [...s].sort((a,b)=>a.localeCompare(b,'he'));
+  }
+}
+
+function pickLocalCSV(){ $('hiddenCsvInput').click(); }
+$('hiddenCsvInput').addEventListener('change', async e=>{
+  const list = [...e.target.files]; e.target.value='';
+  for (const file of list){
+    const text = await file.text();
+    const rows = parseCSV(text.replace(/^\uFEFF/,''));
+    const key = rows.length ? detectFileKey(rows[0]) : null;
+    if (!key){ toast(`לא זוהה סוג הקובץ ${file.name}`, 'err'); continue; }
+    if (fileStats(key).dirty && !confirm(`יש שינויים לא שמורים ב"${FILE_LABELS[key]}". להחליף בקובץ ${file.name}?`)) continue;
+    const keepSha = files[key].sha;
+    loadIntoFile(key, text, `קובץ מקומי: ${file.name}`, keepSha);
+    toast(`נטען "${FILE_LABELS[key]}" מ-${file.name}`, 'ok');
+  }
+  render();
+});
+
+/* ============================================================
+   שמירה
+   ============================================================ */
+function commitMessage(key){
+  const s = fileStats(key); const parts=[];
+  if (s.add) parts.push(`+${s.add} חדשות`); if (s.edit) parts.push(`${s.edit} נערכו`); if (s.del) parts.push(`-${s.del} נמחקו`);
+  return `עדכון ${FILE_LABELS[key]} מעמוד הניהול` + (parts.length ? ` (${parts.join(', ')})` : '');
+}
+async function saveToGitHub(key){
+  if (!hasToken()){ toast('כדי לשמור ישירות צריך להגדיר Token בהגדרות GitHub.', 'err'); openSettings(); return; }
+  const issues = key==='tests' ? files.tests.rows.filter(r=>!norm(val('tests',r,'שם בדיקה'))).length : 0;
+  if (issues && !confirm(`יש ${issues} שורות בלי שם בדיקה – המערכת תתעלם מהן. לשמור בכל זאת?`)) return;
+  const btn = $('btnSave'); if (btn){ btn.disabled = true; btn.textContent = 'שומר...'; }
+  try {
+    const f = files[key];
+    if (!f.sha) f.sha = await ghGetSha(cfg.paths[key]); // למשל אם נטען מקובץ מקומי
+    const b64 = bytesToB64(new TextEncoder().encode(buildCSV(key)));
+    f.sha = await ghPutFile(cfg.paths[key], b64, f.sha, commitMessage(key));
+    f.rows.forEach(r => r.orig = JSON.stringify(r.data));
+    f.deleted = 0; f.source = 'GitHub';
+    toast(`"${FILE_LABELS[key]}" נשמר ב-GitHub. השינוי יופיע באתר בעוד כדקה.`, 'ok');
+  } catch(e){
+    toast(e.message, 'err');
+  }
+  render();
+}
+function downloadCSV(key){
+  const blob = new Blob([buildCSV(key)], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = cfg.paths[key].split('/').pop();
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+async function reloadFile(key){
+  if (Object.keys(files).some(k=>files[k].loaded && fileStats(k).dirty) && !confirm('לבטל את כל השינויים שלא נשמרו ולטעון מחדש?')) return;
+  await loadAll();
+}
+
+/* ============================================================
+   רינדור
+   ============================================================ */
+function switchTab(t){
+  if (t==='notes' && ui.gKind!=='n'){ ui.gPrevKind = ui.gKind; ui.gKind = 'n'; ui.gSel=''; ui.gChecked.clear(); }
+  if (t==='groups' && ui.gKind==='n'){ ui.gKind = ui.gPrevKind || 'r'; ui.gSel=''; ui.gChecked.clear(); }
+  ui.tab = t; render();
+}
+const fileOf = t => (t==='groups' || t==='notes') ? 'tests' : t;
+const keysOf = t => t==='groups' ? ['tests','colors'] : t==='notes' ? ['tests'] : [t];
+function tabStats(t){
+  const st = {add:0, edit:0, del:0, dirty:false};
+  keysOf(t).forEach(k=>{ if (!files[k].loaded) return; const x = fileStats(k); st.add+=x.add; st.edit+=x.edit; st.del+=x.del; st.dirty = st.dirty || x.dirty; });
+  return st;
+}
+async function saveTab(t){
+  const dirty = keysOf(t).filter(k=>files[k].loaded && fileStats(k).dirty);
+  for (const k of dirty) await saveToGitHub(k);
+}
+
+function render(){
+  // שומרים פוקוס, מיקום סמן וגלילה של רשימות, כדי שרינדור מחדש לא "יקפיץ" את המסך
+  const ae = document.activeElement;
+  const fi = (ae && ae.id && $('view').contains(ae)) ? { id:ae.id, s:ae.selectionStart, e:ae.selectionEnd } : null;
+  const scrolls = {}; document.querySelectorAll('[data-ks]').forEach(el=>{ scrolls[el.id] = el.scrollTop; });
+  renderInner();
+  Object.entries(scrolls).forEach(([id,top])=>{ const el=$(id); if (el) el.scrollTop = top; });
+  if (fi){ const el=$(fi.id); if (el){ el.focus(); try{ if (fi.s!=null) el.setSelectionRange(fi.s, fi.e); }catch(e){} } }
+}
+function renderInner(){
+  document.querySelectorAll('.tab').forEach(b=>{
+    const k=b.dataset.tab; b.classList.toggle('active', k===ui.tab);
+    b.classList.toggle('has-dirty', tabStats(k).dirty);
+    $('cnt-'+k).textContent = k==='groups' ? (gList('r').length + gList('t').length + gList('g').length)
+      : k==='notes' ? gList('n').length
+      : files[k].rows.length;
+  });
+  const pill = $('connPill');
+  pill.className = 'conn ' + (hasToken() ? (files.tests.source==='GitHub' ? 'ok' : 'bad') : '');
+  $('connText').textContent = hasToken() ? (files.tests.source==='GitHub' ? `מחובר: ${cfg.owner}/${cfg.repo}` : 'בעיה בחיבור ל-GitHub') : 'לא מחובר – קריאה בלבד';
+
+  if (ui.loading){ $('saveBar').style.display='none'; $('view').innerHTML = `<div class="card loader"><div class="spin"></div>טוען נתונים...</div>`; return; }
+
+  const f = files[fileOf(ui.tab)];
+  if (!f.loaded){
+    $('saveBar').style.display='none';
+    $('view').innerHTML = `
+      <div class="card" style="padding:22px">
+        <div class="drop">
+          <div style="font-size:16px;font-weight:900;margin-bottom:6px">לא הצלחתי לטעון את קבצי הנתונים</div>
+          <div style="color:var(--muted);font-weight:600;margin-bottom:14px;line-height:1.7">
+            זה קורה כשפותחים את העמוד ישירות מהמחשב ובלי Token.<br>
+            אפשר להתחבר ל-GitHub (מומלץ), או לבחור את קבצי ה-CSV מתיקיית <b>data</b> במחשב.
+          </div>
+          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="openSettings()">התחבר ל-GitHub</button>
+            <button class="btn" onclick="pickLocalCSV()">בחר קבצי CSV מהמחשב</button>
+            <button class="btn" onclick="startEmpty('${fileOf(ui.tab)}')">התחל קובץ ריק</button>
+          </div>
+        </div>
+      </div>`;
+    return;
+  }
+  renderSaveBar();
+  if (ui.tab==='tests') renderTests();
+  else if (ui.tab==='groups' || ui.tab==='notes') renderGroups();
+  else if (ui.tab==='messages') renderMessages();
+  else renderFinal();
+}
+function startEmpty(key){ loadIntoFile(key, '', 'חדש'); render(); }
+
+function renderSaveBar(){
+  const key = fileOf(ui.tab), s = tabStats(ui.tab), f = files[key], bar = $('saveBar');
+  bar.style.display = 'flex';
+  bar.className = 'savebar' + (s.dirty ? ' dirty' : '');
+  bar.innerHTML = `
+    <span class="msg">${s.dirty ? 'יש שינויים שלא נשמרו' : 'הכל שמור'}</span>
+    <span class="chips">
+      ${s.add ? `<span class="chip add">+${s.add} חדשות</span>` : ''}
+      ${s.edit ? `<span class="chip edit">${s.edit} נערכו</span>` : ''}
+      ${s.del ? `<span class="chip del">${s.del} נמחקו</span>` : ''}
+    </span>
+    <span style="color:var(--muted);font-size:12px;font-weight:700">מקור: ${esc(f.source)} · <span dir="ltr">${esc(cfg.paths[key])}</span></span>
+    <span class="spacer"></span>
+    <button class="btn btn-sm" onclick="pickLocalCSV()" title="טעינת קובץ CSV מהמחשב">טען CSV</button>
+    <button class="btn btn-sm" onclick="downloadCSV('${key}')">הורד CSV</button>
+    ${s.dirty ? `<button class="btn btn-sm" onclick="reloadFile('${key}')">בטל שינויים</button>` : ''}
+    <button id="btnSave" class="btn btn-primary" onclick="saveTab(ui.tab)" ${s.dirty ? '' : 'disabled'} title="Ctrl+S">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+      שמור ב-GitHub
+    </button>`;
+}
+
+/* ---------- בדיקות ---------- */
+function testIssues(r){
+  const out = [];
+  if (!norm(val('tests',r,'שם בדיקה'))) out.push('חסר שם בדיקה – המערכת תתעלם מהשורה');
+  const k = norm(val('tests',r,'קופת חולים'));
+  if (!KUPOT.includes(k)) out.push(k ? `קופה "${k}" לא מוכרת – תוצג תחת "אחר"` : 'חסרה קופת חולים – תוצג תחת "אחר"');
+  const c = val('tests',r,'צבע מבחנה');
+  if (!colorCode(c)) out.push(norm(c) ? `הצבע "${norm(c)}" לא מזוהה במערכת` : 'חסר צבע מבחנה');
+  const n = norm(val('tests',r,'כמות מבחנות'));
+  if (n && !(parseFloat(n) > 0)) out.push('כמות מבחנות לא תקינה');
+  return out;
+}
+
+function filteredTests(){
+  const q = normKey(ui.q);
+  let rows = files.tests.rows.filter(r=>{
+    if (ui.kupa && norm(val('tests',r,'קופת חולים')) !== ui.kupa) return false;
+    if (ui.lab && norm(val('tests',r,'מעבדה')) !== ui.lab) return false;
+    if (ui.color && (colorCode(val('tests',r,'צבע מבחנה')) || 'other') !== ui.color) return false;
+    if (ui.group){
+      const col = ui.group.startsWith('r:') ? 'בדיקות רוטינה' : 'test type';
+      if (!splitMulti(val('tests',r,col)).includes(ui.group.slice(2))) return false;
+    }
+    if (ui.onlyIssues && !testIssues(r).length) return false;
+    if (ui.onlyChanged && !rowStatus(r)) return false;
+    if (q){
+      const hay = normKey(Object.values(r.data).join(' '));
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  const {col, dir} = ui.sort;
+  if (col){
+    const numeric = ['סדר הדפסה','כמות מבחנות','קוד בדיקה'].includes(col);
+    rows = [...rows].sort((a,b)=>{
+      const va = val('tests',a,col), vb = val('tests',b,col);
+      if (numeric){
+        const na = parseFloat(va), nb = parseFloat(vb);
+        const xa = isNaN(na) ? Infinity : na, xb = isNaN(nb) ? Infinity : nb;
+        if (xa !== xb) return (xa - xb) * dir;
+        return 0;
+      }
+      return norm(va).localeCompare(norm(vb), 'he') * dir;
+    });
+  }
+  return rows;
+}
+
+function uniq(file, name){
+  const m = new Map();
+  const multi = isMulti(file, name);
+  files[file].rows.forEach(r=>{
+    const raw = val(file,r,name);
+    const list = multi ? splitMulti(raw) : (file==='tests' && norm(name)===NOTES_COL) ? splitNotes(raw) : [norm(raw)];
+    list.forEach(v=>{ if (v) m.set(v, (m.get(v)||0)+1); });
+  });
+  return [...m.entries()].sort((a,b)=>a[0].localeCompare(b[0],'he'));
+}
+
+function renderTests(){
+  const rows = filteredTests();
+  const all = files.tests.rows;
+  const issuesCount = all.filter(r=>testIssues(r).length).length;
+  const labs = uniq('tests','מעבדה');
+  const colorsPresent = [...new Set(all.map(r=>colorCode(val('tests',r,'צבע מבחנה'))||'other'))];
+  const th = (col, label) => {
+    const on = ui.sort.col === col;
+    return `<th onclick="sortBy('${esc(col)}')">${label} ${on ? `<span class="arrow">${ui.sort.dir>0?'▲':'▼'}</span>` : ''}</th>`;
+  };
+
+  $('view').innerHTML = `
+    <section class="card">
+      <div class="panel-head">
+        <h2>בדיקות</h2>
+        <span class="chip">${all.length} שורות</span>
+        ${issuesCount ? `<span class="chip" style="color:var(--warn);border-color:#fcd34d;cursor:pointer" onclick="ui.onlyIssues=!ui.onlyIssues;render()">⚠ ${issuesCount} דורשות בדיקה</span>` : ''}
+        <span class="spacer"></span>
+        <button class="btn" onclick="openBulk()">החלפת ערך גורפת</button>
+        <button class="btn btn-primary" onclick="openEditor('tests', null)">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+          בדיקה חדשה
+        </button>
+      </div>
+      <div class="filters">
+        <div class="search">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M21 21l-5-5m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input id="q" class="input" placeholder="חיפוש בכל השדות..." value="${esc(ui.q)}" oninput="ui.q=this.value;renderTestsKeepFocus()">
+        </div>
+        <select class="select" onchange="ui.kupa=this.value;render()">
+          <option value="">כל הקופות</option>
+          ${KUPOT.map(k=>`<option ${ui.kupa===k?'selected':''}>${k}</option>`).join('')}
+        </select>
+        <select class="select" onchange="ui.lab=this.value;render()">
+          <option value="">כל המעבדות</option>
+          ${labs.map(([l,c])=>`<option value="${esc(l)}" ${ui.lab===l?'selected':''}>${esc(l)} (${c})</option>`).join('')}
+        </select>
+        <select class="select" onchange="ui.color=this.value;render()">
+          <option value="">כל הצבעים</option>
+          ${colorsPresent.map(c=>`<option value="${c}" ${ui.color===c?'selected':''}>${COLOR_HE[c]||'לא מזוהה'}</option>`).join('')}
+        </select>
+        <select class="select" onchange="ui.group=this.value;render()">
+          <option value="">כל הרוטינות והקבוצות</option>
+          <optgroup label="רוטינות">${uniq('tests','בדיקות רוטינה').map(([v,c])=>`<option value="r:${esc(v)}" ${ui.group==='r:'+v?'selected':''}>${esc(v)} (${c})</option>`).join('')}</optgroup>
+          <optgroup label="סוג בדיקה / קבוצה">${uniq('tests','test type').map(([v,c])=>`<option value="t:${esc(v)}" ${ui.group==='t:'+v?'selected':''}>${esc(v)} (${c})</option>`).join('')}</optgroup>
+        </select>
+        <label class="check"><input type="checkbox" ${ui.onlyIssues?'checked':''} onchange="ui.onlyIssues=this.checked;render()"> רק עם בעיות</label>
+        <label class="check"><input type="checkbox" ${ui.onlyChanged?'checked':''} onchange="ui.onlyChanged=this.checked;render()"> רק ששונו</label>
+        ${(ui.q||ui.kupa||ui.lab||ui.color||ui.group||ui.onlyIssues||ui.onlyChanged) ? `<button class="btn btn-sm btn-ghost" onclick="clearFilters()">נקה סינון</button>` : ''}
+      </div>
+      <div class="table-wrap" id="tableWrap">
+        ${rows.length ? `
+        <table class="grid">
+          <thead><tr>
+            ${th('סדר הדפסה','סדר')}
+            ${th('שם בדיקה','שם בדיקה')}
+            ${th('קופת חולים','קופה')}
+            ${th('קוד בדיקה','קוד')}
+            ${th('מעבדה','מעבדה')}
+            ${th('צבע מבחנה','מבחנה')}
+            ${th('כלל מבחנה','כלל')}
+            ${th('כמות מבחנות','כמות')}
+            ${th('tube_group','קבוצה')}
+            ${th('בדיקות רוטינה','רוטינה / סוג')}
+            <th class="nosort"></th>
+          </tr></thead>
+          <tbody>${rows.map(testRowHtml).join('')}</tbody>
+        </table>` : `<div class="empty">לא נמצאו בדיקות לפי הסינון</div>`}
+      </div>
+      <div class="foot-info">מוצגות ${rows.length} מתוך ${all.length}. לחיצה על כותרת עמודה ממיינת. לחיצה כפולה על שורה פותחת עריכה.</div>
+    </section>`;
+}
+function testRowHtml(r){
+  const st = rowStatus(r), issues = testIssues(r);
+  const c = val('tests',r,'צבע מבחנה'), code = colorCode(c);
+  const rule = norm(val('tests',r,'כלל מבחנה'));
+  const tags = [...splitMulti(val('tests',r,'בדיקות רוטינה')), ...splitMulti(val('tests',r,'test type'))];
+  const instr = norm(val('tests',r,'הוראות מיוחדות'));
+  return `<tr class="${st?'st-'+st:''}" ondblclick="openEditor('tests',${r.id})">
+    <td class="num">${esc(val('tests',r,'סדר הדפסה'))}</td>
+    <td>
+      <div class="name">${issues.length?`<span class="warn-ic" title="${esc(issues.join('\n'))}">!</span>`:''}${instr?`<span class="instr-ic" title="${esc(instr)}">⚠</span>`:''}${esc(val('tests',r,'שם בדיקה')) || '<span style="color:var(--danger)">ללא שם</span>'}</div>
+      ${norm(val('tests',r,'תיאור')) ? `<div class="sub" title="${esc(val('tests',r,'תיאור'))}">${esc(val('tests',r,'תיאור'))}</div>` : ''}
+    </td>
+    <td><span class="kupa-tag">${esc(norm(val('tests',r,'קופת חולים'))||'—')}</span></td>
+    <td class="num" dir="ltr" style="text-align:right">${esc(val('tests',r,'קוד בדיקה'))}</td>
+    <td>${esc(val('tests',r,'מעבדה'))}</td>
+    <td style="white-space:nowrap"><span class="swatch" style="background:${COLOR_HEX[code]||'#fff'};${code?'':'border-style:dashed'}"></span>${esc(COLOR_HE[code] || norm(c) || '—')}</td>
+    <td>${rule==='per_test'?'נפרדת':rule==='shared'?'משותפת':'<span style="color:var(--muted)">משותפת*</span>'}</td>
+    <td class="num">${esc(val('tests',r,'כמות מבחנות'))}</td>
+    <td>${esc(val('tests',r,'tube_group'))}</td>
+    <td><div style="display:flex;flex-wrap:wrap;gap:4px;max-width:260px">${tags.map(t=>`<span class="tagchip sm">${esc(t)}</span>`).join('')}</div></td>
+    <td class="actions">
+      <button class="btn btn-sm icon-btn" title="עריכה" onclick="openEditor('tests',${r.id})">✎</button>
+      <button class="btn btn-sm icon-btn" title="שכפול (למשל לקופה אחרת)" onclick="duplicateRow('tests',${r.id})">⧉</button>
+      <button class="btn btn-sm icon-btn btn-danger" title="מחיקה" onclick="deleteRow('tests',${r.id})">🗑</button>
+    </td>
+  </tr>`;
+}
+function renderTestsKeepFocus(){
+  const el = $('q'), pos = el ? el.selectionStart : null;
+  const wrapScroll = $('tableWrap')?.scrollTop;
+  render();
+  const n = $('q'); if (n){ n.focus(); if (pos!=null) n.setSelectionRange(pos,pos); }
+  if ($('tableWrap') && wrapScroll!=null) $('tableWrap').scrollTop = 0;
+}
+function sortBy(col){
+  if (ui.sort.col === col) ui.sort.dir *= -1; else ui.sort = {col, dir:1};
+  render();
+}
+function clearFilters(){ Object.assign(ui, {q:'',kupa:'',lab:'',color:'',group:'',onlyIssues:false,onlyChanged:false}); render(); }
+
+/* ============================================================
+   רוטינות וקבוצות – ניהול קבוצות והוספת בדיקות בכמות
+   ============================================================ */
+const GKINDS = {
+  r: { col:'בדיקות רוטינה', label:'רוטינות',       one:'רוטינה',       multi:true  },
+  t: { col:'test type',     label:'סוגי בדיקה',    one:'סוג בדיקה',    multi:true  },
+  g: { col:'tube_group',    label:'קבוצות מבחנה',  one:'קבוצת מבחנה',  multi:false },
+  n: { col:'הוראות מיוחדות', label:'הערות',        one:'הערה',         multi:true, lines:true }
+};
+const GROUP_KINDS = ['r','t','g'];
+Object.assign(ui, { gKind:'r', gSel:'', gSearch:'', gq:'', gKupa:'', gSrc:'', gMemKupa:'', gChecked:new Set(), gPending:{r:[],t:[],g:[],n:[]} });
+let gListCache = [];
+
+const kSplit = K => K.lines ? splitNotes : splitMulti;
+const kJoin  = K => K.lines ? joinNotes : joinMulti;
+function gHas(kind, r, name){
+  const K = GKINDS[kind], v = val('tests', r, K.col);
+  return K.multi ? kSplit(K)(v).includes(name) : norm(v) === name;
+}
+function gSetCell(r, col, v){ const h = hdr('tests', col); if (h) r.data = { ...r.data, [h]: v }; }
+function gAdd(kind, r, name){
+  const K = GKINDS[kind];
+  if (K.multi){ const l = kSplit(K)(val('tests',r,K.col)); if (!l.includes(name)){ l.push(name); gSetCell(r, K.col, kJoin(K)(l)); } }
+  else if (norm(val('tests',r,K.col)) !== name) gSetCell(r, K.col, name);
+}
+function gRemove(kind, r, name){
+  const K = GKINDS[kind];
+  if (K.multi) gSetCell(r, K.col, kJoin(K)(kSplit(K)(val('tests',r,K.col)).filter(x=>x!==name)));
+  else if (norm(val('tests',r,K.col)) === name) gSetCell(r, K.col, '');
+}
+function gList(kind){
+  if (!files.tests.loaded || !hdr('tests', GKINDS[kind].col)) return [];
+  const m = new Map(uniq('tests', GKINDS[kind].col));
+  ui.gPending[kind].forEach(n=>{ if (!m.has(n)) m.set(n, 0); });
+  return [...m.entries()].sort((a,b)=>a[0].localeCompare(b[0],'he'));
+}
+function gMembers(kind, name){ return files.tests.rows.filter(r=>gHas(kind, r, name)); }
+function srcMatch(src, r){
+  if (!src) return true;
+  if (src.startsWith('lab:')) return norm(val('tests',r,'מעבדה')) === src.slice(4);
+  return gHas(src[0], r, src.slice(2));
+}
+function srcOptions(selected, emptyLabel){
+  let h = `<option value="">${emptyLabel}</option>`;
+  ['r','t','g','n'].forEach(k=>{
+    const l = gList(k).filter(([,c])=>c>0); if (!l.length) return;
+    h += `<optgroup label="${GKINDS[k].label}">${l.map(([v,c])=>`<option value="${k}:${esc(v)}" ${selected===k+':'+v?'selected':''}>${esc(v)} (${c})</option>`).join('')}</optgroup>`;
+  });
+  const labs = uniq('tests','מעבדה');
+  if (labs.length) h += `<optgroup label="מעבדות">${labs.map(([v,c])=>`<option value="lab:${esc(v)}" ${selected==='lab:'+v?'selected':''}>${esc(v)} (${c})</option>`).join('')}</optgroup>`;
+  return h;
+}
+function sortByPrint(a,b){
+  const na=parseFloat(val('tests',a,'סדר הדפסה')), nb=parseFloat(val('tests',b,'סדר הדפסה'));
+  return (isNaN(na)?1e9:na)-(isNaN(nb)?1e9:nb);
+}
+function guessKupa(name, members){
+  const cnt = new Map(); members.forEach(r=>{ const k=norm(val('tests',r,'קופת חולים')); cnt.set(k,(cnt.get(k)||0)+1); });
+  if (cnt.size){ const top=[...cnt.entries()].sort((a,b)=>b[1]-a[1])[0]; if (top[1] === members.length) return top[0]; }
+  return KUPOT.find(k=>name.includes(k)) || (cnt.size===1 ? [...cnt.keys()][0] : '');
+}
+
+/* ---------- צבע כפתור לרוטינה / סוג בדיקה (נשמר ב-data/group-colors.csv) ---------- */
+const COLOR_KIND_LABEL = { r:'רוטינה', t:'סוג בדיקה' };
+const BTN_PALETTE = ['#155E8A','#2563eb','#4f46e5','#7c3aed','#c026d3','#db2777','#dc2626','#ea580c','#b45309','#16a34a','#0d9488','#0891b2','#475569','#0f172a'];
+function colorRow(kind, name){
+  const lbl = COLOR_KIND_LABEL[kind]; if (!lbl || !files.colors.loaded) return null;
+  return files.colors.rows.find(r=>norm(val('colors',r,'סוג'))===lbl && norm(val('colors',r,'שם'))===name) || null;
+}
+function getGColor(kind, name){ const r = colorRow(kind, name); const c = r ? norm(val('colors',r,'צבע')) : ''; return /^#[0-9a-f]{6}$/i.test(c) ? c : ''; }
+function setGColor(kind, name, hex){
+  const lbl = COLOR_KIND_LABEL[kind]; if (!lbl) return;
+  const f = files.colors; let r = colorRow(kind, name);
+  if (!hex){
+    if (r){ const i = f.rows.indexOf(r); if (r.orig) f.deleted++; f.rows.splice(i,1); }
+  } else if (r){
+    gSetColorCell(r, 'צבע', hex.toLowerCase());
+  } else {
+    const data = {}; f.headers.forEach(h=>data[h]='');
+    data[hdr('colors','סוג')] = lbl; data[hdr('colors','שם')] = name; data[hdr('colors','צבע')] = hex.toLowerCase();
+    f.rows.push({ id: nextId++, data, orig:null });
+  }
+  render();
+}
+function gSetColorCell(r, col, v){ const h = hdr('colors', col); if (h) r.data = { ...r.data, [h]: v }; }
+function renameGColor(kind, oldName, newName){
+  const r = colorRow(kind, oldName); if (!r) return;
+  if (colorRow(kind, newName)){ setGColor(kind, oldName, ''); return; } // לקבוצה המאוחדת כבר יש צבע
+  gSetColorCell(r, 'שם', newName);
+}
+function chipPreview(name, c, active){
+  if (!c) c = '#155E8A';
+  const st = active ? `background:${c};border-color:${c};color:#fff` : `background:${c}0F;border-color:${c}66;color:${c}`;
+  return `<span style="display:inline-flex;align-items:center;gap:7px;border:1px solid;border-radius:999px;padding:6px 14px;font-weight:800;font-size:13px;${st}"><span style="width:9px;height:9px;border-radius:50%;background:${active?'#fff':c}"></span>${esc(name)}</span>`;
+}
+function colorPickerHtml(kind, name){
+  const cur = getGColor(kind, name);
+  return `<div style="display:flex;flex-direction:column;gap:8px;background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:10px 12px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font-size:12px;font-weight:800;color:#334155">צבע הכפתור במערכת:</span>
+      ${chipPreview(name, cur, true)} ${chipPreview(name, cur, false)}
+      ${cur ? '' : '<span style="font-size:11px;color:var(--muted);font-weight:700">(ברירת מחדל)</span>'}
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      ${BTN_PALETTE.map(c=>`<button type="button" title="${c}" onclick="setGColor('${kind}', gSelName(), '${c}')" style="width:24px;height:24px;border-radius:50%;background:${c};border:${cur===c?'3px solid #fff;box-shadow:0 0 0 2px '+c:'1px solid rgba(0,0,0,.15)'};padding:0"></button>`).join('')}
+      <label title="צבע אחר" style="position:relative;width:24px;height:24px;border-radius:50%;border:1px dashed #94a3b8;display:inline-flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;overflow:hidden">+
+        <input type="color" value="${cur||'#155e8a'}" onchange="setGColor('${kind}', gSelName(), this.value)" style="position:absolute;inset:0;opacity:0;cursor:pointer">
+      </label>
+      ${cur ? `<button type="button" class="btn btn-sm btn-ghost" onclick="setGColor('${kind}', gSelName(), '')">איפוס</button>` : ''}
+    </div>
+  </div>`;
+}
+const gSelName = () => ui.gSel;
+
+function setGKind(k){ ui.gKind = k; ui.gSel = ''; ui.gChecked.clear(); render(); }
+function selectGroupIdx(i){
+  const name = gListCache[i]; if (name == null) return;
+  ui.gSel = name; ui.gChecked.clear(); ui.gq=''; ui.gSrc=''; ui.gMemKupa='';
+  ui.gKupa = guessKupa(name, gMembers(ui.gKind, name));
+  render();
+}
+function gCandidates(){
+  const kind = ui.gKind, name = ui.gSel, q = normKey(ui.gq);
+  return files.tests.rows.filter(r=>{
+    if (gHas(kind, r, name)) return false;
+    if (ui.gKupa && norm(val('tests',r,'קופת חולים')) !== ui.gKupa) return false;
+    if (!srcMatch(ui.gSrc, r)) return false;
+    if (q && !normKey(Object.values(r.data).join(' ')).includes(q)) return false;
+    return true;
+  }).sort(sortByPrint);
+}
+
+function renderGroups(){
+  const kind = ui.gKind, K = GKINDS[kind];
+  if (!hdr('tests', K.col)){ $('view').innerHTML = `<div class="card empty">העמודה "${esc(K.col)}" לא קיימת בקובץ הבדיקות</div>`; return; }
+  const full = gList(kind);
+  if (ui.gSel && !full.some(([n])=>n===ui.gSel)) ui.gSel = '';
+  const qs = normKey(ui.gSearch);
+  const list = full.filter(([n])=>!qs || normKey(n).includes(qs));
+  gListCache = list.map(([n])=>n);
+
+  // ----- עמודה 1: רשימת הקבוצות -----
+  const col1 = `
+    <section class="card gcol">
+      <div style="padding:12px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--line)">
+        ${kind==='n' ? `<div style="font-size:12px;color:var(--muted);font-weight:700;line-height:1.6">כל הערה מופיעה בסל ובצפייה בהזמנה. לבדיקה יכולות להיות כמה הערות.</div>`
+          : `<div class="seg">${GROUP_KINDS.map(k=>`<button class="${k===kind?'on':''}" onclick="setGKind('${k}')">${GKINDS[k].label}</button>`).join('')}</div>`}
+        <div style="display:flex;gap:6px">
+          <input id="gSearch" class="input" style="padding:7px 10px" placeholder="חיפוש..." value="${esc(ui.gSearch)}" oninput="ui.gSearch=this.value;render()">
+          <button class="btn btn-primary" onclick="openNewGroup()" title="${K.one} חדשה">+ חדשה</button>
+        </div>
+      </div>
+      <div class="scroll" id="gListBox" data-ks style="padding:6px">
+        ${list.length ? list.map(([n,c],i)=>`<button class="gitem ${n===ui.gSel?'on':''} ${c===0?'zero':''}" onclick="selectGroupIdx(${i})">${getGColor(kind,n)?`<span style="width:10px;height:10px;border-radius:50%;flex:none;background:${getGColor(kind,n)}"></span>`:''}<span class="gname" title="${esc(n)}">${esc(n)}</span><span class="n">${c}</span></button>`).join('')
+          : `<div class="empty" style="padding:30px 10px">${full.length?'לא נמצא':'אין עדיין '+K.label}</div>`}
+      </div>
+    </section>`;
+
+  if (!ui.gSel){
+    $('view').innerHTML = `<div class="glayout">${col1}
+      <section class="card gcol" style="grid-column:span 2"><div class="gempty">
+        <div style="font-size:16px;color:var(--ink);font-weight:900">בחר ${K.one} מהרשימה, או צור חדשה</div>
+        <div>${kind==='n' ? 'כאן אפשר לכתוב הערה פעם אחת ולשייך אותה להרבה בדיקות בבת אחת,<br>לערוך את הנוסח בכל הבדיקות יחד, או להסיר אותה.'
+                            : 'כאן אפשר להוסיף לקבוצה הרבה בדיקות בבת אחת, להעתיק בדיקות מקבוצה אחרת,<br>לשנות שם לקבוצה, לשכפל אותה או למחוק אותה.'}</div>
+        <button class="btn btn-primary" onclick="openNewGroup()">+ ${K.one} חדשה</button>
+      </div></section></div>`;
+    return;
+  }
+
+  // ----- עמודה 2: חברי הקבוצה -----
+  const members = gMembers(kind, ui.gSel).sort(sortByPrint);
+  const kupaCnt = new Map(); members.forEach(r=>{ const k=norm(val('tests',r,'קופת חולים'))||'—'; kupaCnt.set(k,(kupaCnt.get(k)||0)+1); });
+  const shownMembers = ui.gMemKupa ? members.filter(r=>(norm(val('tests',r,'קופת חולים'))||'—')===ui.gMemKupa) : members;
+  const rowMeta = r => {
+    const code = colorCode(val('tests',r,'צבע מבחנה'));
+    return `<span class="swatch" style="background:${COLOR_HEX[code]||'#fff'};margin:0"></span>`;
+  };
+  const col2 = `
+    <section class="card gcol">
+      <div class="ghead">
+        <h2>${esc(ui.gSel)} <span class="chip">${members.length} בדיקות</span></h2>
+        ${COLOR_KIND_LABEL[kind] ? colorPickerHtml(kind, ui.gSel) : ''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-sm" onclick="renameGroup()">${kind==='n'?'✎ עריכת נוסח':'✎ שינוי שם'}</button>
+          <button class="btn btn-sm" onclick="openNewGroup(true)">${kind==='n'?'⧉ שכפול להערה חדשה':'⧉ שכפול לקבוצה חדשה'}</button>
+          <span class="spacer"></span>
+          <button class="btn btn-sm btn-danger" onclick="deleteGroup()">${kind==='n'?'מחיקת ההערה':'מחיקת הקבוצה'}</button>
+        </div>
+        ${kupaCnt.size > 1 ? `<div style="display:flex;gap:5px;flex-wrap:wrap">
+          <button class="kchip ${!ui.gMemKupa?'on':''}" onclick="ui.gMemKupa='';render()">הכל</button>
+          ${[...kupaCnt.entries()].map(([k,c])=>`<button class="kchip ${ui.gMemKupa===k?'on':''}" onclick="ui.gMemKupa='${esc(k)}';render()">${esc(k)} (${c})</button>`).join('')}
+        </div>` : ''}
+      </div>
+      <div class="scroll" id="gMemBox" data-ks>
+        ${shownMembers.length ? shownMembers.map(r=>`
+          <div class="lrow ${rowStatus(r)==='new'?'st-new':''}">
+            ${rowMeta(r)}
+            <span class="nm">${esc(val('tests',r,'שם בדיקה'))}</span>
+            <span class="kupa-tag">${esc(norm(val('tests',r,'קופת חולים'))||'—')}</span>
+            <span class="meta">${esc(val('tests',r,'מעבדה'))}</span>
+            <button class="btn btn-sm icon-btn btn-ghost" title="הסר מהקבוצה" onclick="removeMember(${r.id})">✕</button>
+          </div>`).join('')
+          : `<div class="gempty">הקבוצה ריקה עדיין.<br>בחר בדיקות מהרשימה שמשמאל והוסף אותן.</div>`}
+      </div>
+    </section>`;
+
+  // ----- עמודה 3: הוספת בדיקות -----
+  const cands = gCandidates();
+  [...ui.gChecked].forEach(id=>{ if (!cands.some(r=>r.id===id)) ui.gChecked.delete(id); });
+  const nChecked = ui.gChecked.size;
+  const allChecked = cands.length && nChecked === cands.length;
+  const col3 = `
+    <section class="card gcol">
+      <div class="ghead" style="gap:4px">
+        <h2 style="font-size:15px">הוספת בדיקות ל־${esc(ui.gSel)}</h2>
+        <div style="font-size:12px;color:var(--muted);font-weight:600">
+          ${kind==='n' ? 'ההערה תתווסף לבדיקות שתבחר. הערות קיימות שלהן לא נמחקות.'
+            : K.multi ? 'בדיקה יכולה להיות בכמה '+K.label+' – ההוספה לא מוציאה אותה מקבוצות אחרות.' : 'בדיקה יכולה להיות רק בקבוצת מבחנה אחת – הוספה תעביר אותה מהקבוצה הנוכחית שלה.'}
+        </div>
+      </div>
+      <div class="gbar">
+        <input id="gq" class="input" placeholder="חיפוש בדיקה..." value="${esc(ui.gq)}" oninput="ui.gq=this.value;render()">
+        <select class="select" onchange="ui.gKupa=this.value;render()">
+          <option value="">כל הקופות</option>${KUPOT.map(k=>`<option ${ui.gKupa===k?'selected':''}>${k}</option>`).join('')}
+        </select>
+        <select class="select" style="flex-basis:100%" onchange="ui.gSrc=this.value;render()">${srcOptions(ui.gSrc, 'מתוך: כל הבדיקות')}</select>
+      </div>
+      <div class="gbar" style="background:#fff">
+        <label class="check"><input type="checkbox" ${allChecked?'checked':''} ${cands.length?'':'disabled'} onchange="toggleAllCands(this.checked)"> סמן הכל (${cands.length})</label>
+        <span class="spacer"></span>
+        <button class="btn btn-sm btn-primary" ${nChecked?'':'disabled'} onclick="addChecked()">הוסף מסומנות (${nChecked})</button>
+        <button class="btn btn-sm" ${cands.length?'':'disabled'} onclick="addAllShown()">הוסף את כל ${cands.length} המוצגות</button>
+      </div>
+      <div class="scroll" id="gCandBox" data-ks>
+        ${cands.length ? cands.map(r=>{
+          const on = ui.gChecked.has(r.id);
+          const cur = !K.multi ? norm(val('tests',r,K.col)) : kind==='n' ? (splitNotes(val('tests',r,K.col)).length ? splitNotes(val('tests',r,K.col)).length + ' הערות' : '') : '';
+          return `<label class="lrow pick ${on?'checked':''}">
+            <input type="checkbox" ${on?'checked':''} onchange="toggleCand(${r.id},this.checked)">
+            ${rowMeta(r)}
+            <span class="nm">${esc(val('tests',r,'שם בדיקה'))}</span>
+            ${cur ? `<span class="tagchip sm" title="${kind==='n' ? esc(splitNotes(val('tests',r,K.col)).join(' | ')) : 'קבוצת המבחנה הנוכחית'}">${esc(cur)}</span>` : ''}
+            <span class="kupa-tag">${esc(norm(val('tests',r,'קופת חולים'))||'—')}</span>
+            <span class="meta">${esc(val('tests',r,'מעבדה'))}</span>
+          </label>`;}).join('')
+          : `<div class="gempty">אין בדיקות להוספה לפי הסינון.<br>${ui.gKupa||ui.gSrc||ui.gq ? 'נסה לשנות את הסינון.' : 'כל הבדיקות כבר בקבוצה.'}</div>`}
+      </div>
+    </section>`;
+
+  $('view').innerHTML = `<div class="glayout">${col1}${col2}${col3}</div>`;
+}
+
+function toggleCand(id, on){ on ? ui.gChecked.add(id) : ui.gChecked.delete(id); render(); }
+function toggleAllCands(on){ ui.gChecked = new Set(on ? gCandidates().map(r=>r.id) : []); render(); }
+function addRowsToGroup(rows){
+  if (!rows.length) return;
+  const kind = ui.gKind, K = GKINDS[kind];
+  if (!K.multi){
+    const moving = rows.filter(r=>norm(val('tests',r,K.col)));
+    if (moving.length && !confirm(`${moving.length} מהבדיקות כבר נמצאות בקבוצת מבחנה אחרת ויועברו ל"${ui.gSel}". להמשיך?`)) return;
+  }
+  rows.forEach(r=>gAdd(kind, r, ui.gSel));
+  ui.gChecked.clear();
+  toast(`${rows.length} בדיקות נוספו ל"${ui.gSel}" (טיוטה – לחץ "שמור ב-GitHub").`);
+  render();
+}
+function addChecked(){ addRowsToGroup(files.tests.rows.filter(r=>ui.gChecked.has(r.id))); }
+function addAllShown(){
+  const rows = gCandidates();
+  if (rows.length > 15 && !confirm(`להוסיף ${rows.length} בדיקות ל"${ui.gSel}"?`)) return;
+  addRowsToGroup(rows);
+}
+function removeMember(id){
+  const r = files.tests.rows.find(x=>x.id===id); if (!r) return;
+  gRemove(ui.gKind, r, ui.gSel);
+  if (!gMembers(ui.gKind, ui.gSel).length && !ui.gPending[ui.gKind].includes(ui.gSel)) ui.gPending[ui.gKind].push(ui.gSel);
+  render();
+}
+function renameGroup(){
+  const kind = ui.gKind, old = ui.gSel;
+  const nn = (prompt(kind==='n' ? 'נוסח חדש להערה (ישתנה בכל הבדיקות):' : `שם חדש ל"${old}":`, old) || '').trim();
+  if (!nn || nn === old) return;
+  if (/[,;|]/.test(nn) && GKINDS[kind].multi && !GKINDS[kind].lines){ toast('השם לא יכול להכיל פסיק, נקודה-פסיק או |', 'err'); return; }
+  const exists = gList(kind).some(([n])=>n===nn);
+  if (exists && !confirm(`כבר קיימת קבוצה בשם "${nn}". לאחד את שתי הקבוצות?`)) return;
+  gMembers(kind, old).forEach(r=>{ gRemove(kind, r, old); gAdd(kind, r, nn); });
+  renameGColor(kind, old, nn);
+  ui.gPending[kind] = ui.gPending[kind].filter(n=>n!==old);
+  if (!gMembers(kind, nn).length) ui.gPending[kind].push(nn);
+  ui.gSel = nn; toast('השם שונה בכל הבדיקות.'); render();
+}
+function deleteGroup(){
+  const kind = ui.gKind, name = ui.gSel, members = gMembers(kind, name);
+  if (!confirm(`למחוק את "${name}"?\n${members.length ? `הקבוצה תוסר מ-${members.length} בדיקות. הבדיקות עצמן לא יימחקו.` : ''}`)) return;
+  members.forEach(r=>gRemove(kind, r, name));
+  if (getGColor(kind, name)) setGColor(kind, name, '');
+  ui.gPending[kind] = ui.gPending[kind].filter(n=>n!==name);
+  ui.gSel = ''; toast('הקבוצה נמחקה.'); render();
+}
+
+// ----- קבוצה חדשה / שכפול -----
+function openNewGroup(copyCurrent=false){
+  $('gm_kind').value = ui.gKind;
+  $('gm_kind').closest('.field').style.display = ui.gKind==='n' ? 'none' : '';
+  $('gm_create').textContent = ui.gKind==='n' ? 'צור הערה' : 'צור קבוצה';
+  $('gmTitle').textContent = ui.gKind==='n' ? (copyCurrent ? 'שכפול הערה' : 'הערה חדשה') : '';
+  $('gm_name').placeholder = ui.gKind==='n' ? 'לדוגמה: יש להגיע למעבדה תוך שעתיים' : 'לדוגמה: רוטינה קבלה';
+  $('gm_name').value = copyCurrent ? ui.gSel + ' (העתק)' : '';
+  $('gm_src').innerHTML = srcOptions(copyCurrent ? `${ui.gKind}:${ui.gSel}` : '', 'ריקה – אוסיף בדיקות אחר כך');
+  $('gm_kupa').value = '';
+  if (ui.gKind!=='n') $('gmTitle').textContent = copyCurrent ? `שכפול "${ui.gSel}"` : 'קבוצה חדשה';
+  gmPreview(); openModal('groupModal');
+  setTimeout(()=>{ $('gm_name').focus(); $('gm_name').select(); }, 50);
+}
+function gmSourceRows(){
+  const src = $('gm_src').value, kupa = $('gm_kupa').value;
+  if (!src) return [];
+  return files.tests.rows.filter(r=>srcMatch(src, r) && (!kupa || norm(val('tests',r,'קופת חולים'))===kupa));
+}
+function gmPreview(){
+  const kind = $('gm_kind').value, name = $('gm_name').value.trim(), rows = gmSourceRows();
+  const exists = name && gList(kind).some(([n])=>n===name);
+  let msg = rows.length ? `${rows.length} בדיקות יועתקו לקבוצה החדשה.` : 'הקבוצה תיווצר ריקה, ואז תוכל להוסיף לה בדיקות.';
+  if (exists) msg += ` <b>קבוצה בשם הזה כבר קיימת – הבדיקות יתווספו אליה.</b>`;
+  if (kind==='g' && rows.length) msg += ' שים לב: בקבוצת מבחנה הבדיקות יועברו מהקבוצה הנוכחית שלהן.';
+  $('gm_preview').innerHTML = msg;
+}
+function createGroup(){
+  const kind = $('gm_kind').value, name = $('gm_name').value.trim(), rows = gmSourceRows();
+  if (!name){ toast('צריך לתת שם לקבוצה', 'err'); return; }
+  if (GKINDS[kind].multi && !GKINDS[kind].lines && /[,;|]/.test(name)){ toast('השם לא יכול להכיל פסיק, נקודה-פסיק או |', 'err'); return; }
+  if (kind==='g'){
+    const moving = rows.filter(r=>norm(val('tests',r,'tube_group')));
+    if (moving.length && !confirm(`${moving.length} בדיקות יועברו מקבוצת המבחנה הנוכחית שלהן. להמשיך?`)) return;
+  }
+  rows.forEach(r=>gAdd(kind, r, name));
+  if (!rows.length && !ui.gPending[kind].includes(name)) ui.gPending[kind].push(name);
+  const src = $('gm_src').value;
+  if (src && src[1]===':' && src[0]===kind && !getGColor(kind, name) && getGColor(kind, src.slice(2))) setGColor(kind, name, getGColor(kind, src.slice(2)));
+  closeModal('groupModal');
+  ui.gKind = kind; ui.gSel = name; ui.gChecked.clear(); ui.gq=''; ui.gSrc=''; ui.gMemKupa='';
+  ui.gKupa = guessKupa(name, gMembers(kind, name));
+  toast(rows.length ? `נוצרה "${name}" עם ${rows.length} בדיקות.` : `נוצרה "${name}". עכשיו בחר בדיקות להוספה.`);
+  if (kind==='n') ui.tab = 'notes'; else if (ui.tab !== 'groups') ui.tab = 'groups';
+  render();
+}
+
+/* ---------- הודעות ---------- */
+function renderMessages(){
+  const rows = files.messages.rows;
+  $('view').innerHTML = `
+    <section class="card">
+      <div class="panel-head">
+        <h2>הודעות חשובות</h2>
+        <span class="chip">מוצגות בפאנל הצהוב במסך הבית</span>
+        <span class="spacer"></span>
+        <button class="btn btn-primary" onclick="openEditor('messages', null)">+ הודעה חדשה</button>
+      </div>
+      ${rows.length ? `<div class="cards">${rows.map(r=>{
+        const st = rowStatus(r), on = ['כן','yes','true','1'].includes(norm(val('messages',r,'לפרסום?')).toLowerCase()) || !norm(val('messages',r,'לפרסום?'));
+        return `<article class="mcard ${st?'st-'+st:''}">
+          <div class="row"><h3 style="flex:1">${esc(val('messages',r,'נושא הודעה'))||'<span style="color:var(--muted)">ללא נושא</span>'}</h3>
+            <span class="pill ${on?'on':'off'}">${on?'מפורסם':'מוסתר'}</span></div>
+          <div class="body">${esc(norm(val('messages',r,'תוכן הודעה')))||'—'}</div>
+          <div class="row">
+            <button class="btn btn-sm" onclick="openEditor('messages',${r.id})">✎ עריכה</button>
+            <button class="btn btn-sm" onclick="togglePublish(${r.id})">${on?'הסתר':'פרסם'}</button>
+            <span class="spacer"></span>
+            <button class="btn btn-sm btn-danger" onclick="deleteRow('messages',${r.id})">מחיקה</button>
+          </div>
+        </article>`;}).join('')}</div>` : `<div class="empty">אין הודעות. לחץ "הודעה חדשה" כדי להוסיף.</div>`}
+    </section>`;
+}
+function togglePublish(id){
+  const r = files.messages.rows.find(x=>x.id===id); const h = hdr('messages','לפרסום?');
+  if (!r || !h) return;
+  const on = ['כן','yes','true','1'].includes(norm(r.data[h]).toLowerCase()) || !norm(r.data[h]);
+  r.data[h] = on ? 'לא' : 'כן'; render();
+}
+
+/* ---------- מסך סיום ---------- */
+function renderFinal(){
+  const rows = files.final.rows;
+  // איזו שורה המערכת תציג בפועל: פעילה + תאריך חדש ביותר
+  const isOn = r => ['1','true','yes','כן','פעיל','active'].includes(normKey(val('final',r,'פעיל')));
+  const pool = rows.filter(isOn).length ? rows.filter(isOn) : rows;
+  const shown = [...pool].filter(r=>norm(val('final',r,'שם קובץ תמונה')))
+    .sort((a,b)=> (new Date(val('final',b,'תאריך')).getTime()||0) - (new Date(val('final',a,'תאריך')).getTime()||0))[0];
+  $('view').innerHTML = `
+    <section class="card">
+      <div class="panel-head">
+        <h2>מסך סיום</h2>
+        <span class="chip">התמונה שמוצגת לצוות בסוף התהליך</span>
+        <span class="spacer"></span>
+        <button class="btn btn-primary" onclick="openEditor('final', null)">+ תמונה חדשה</button>
+      </div>
+      ${rows.length ? `<div class="cards">${rows.map(r=>{
+        const st = rowStatus(r), on = isOn(r), img = imageUrl(val('final',r,'שם קובץ תמונה'));
+        return `<article class="mcard ${st?'st-'+st:''}">
+          ${img ? `<img class="thumb" src="${esc(img)}" alt="" onerror="this.style.opacity=.3">` : `<div class="thumb" style="display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:700">אין תמונה</div>`}
+          <div class="row"><h3 style="flex:1">${esc(val('final',r,'כותרת'))||'ללא כותרת'}</h3>
+            ${r===shown ? '<span class="pill on">מוצג כעת</span>' : ''}<span class="pill ${on?'on':'off'}">${on?'פעיל':'לא פעיל'}</span></div>
+          <div style="color:var(--muted);font-size:12px;font-weight:700">${esc(val('final',r,'תאריך'))} · <span dir="ltr">${esc(val('final',r,'שם קובץ תמונה'))}</span></div>
+          <div class="row">
+            <button class="btn btn-sm" onclick="openEditor('final',${r.id})">✎ עריכה</button>
+            <span class="spacer"></span>
+            <button class="btn btn-sm btn-danger" onclick="deleteRow('final',${r.id})">מחיקה</button>
+          </div>
+        </article>`;}).join('')}</div>` : `<div class="empty">אין תמונת סיום. לחץ "תמונה חדשה" כדי להוסיף.</div>`}
+    </section>`;
+}
+
+/* ============================================================
+   פעולות על שורות
+   ============================================================ */
+function deleteRow(file, id){
+  const f = files[file], i = f.rows.findIndex(r=>r.id===id);
+  if (i<0) return;
+  const r = f.rows[i];
+  const name = norm(Object.values(r.data)[0]) || 'השורה';
+  const extra = file==='tests' ? ` (${norm(val('tests',r,'קופת חולים'))})` : '';
+  if (!confirm(`למחוק את "${name}"${extra}?\nהמחיקה תיכנס לתוקף רק אחרי "שמור ב-GitHub".`)) return;
+  if (r.orig) f.deleted++;
+  f.rows.splice(i,1);
+  toast('נמחק. אפשר לבטל עם "בטל שינויים" לפני השמירה.');
+  render();
+}
+function duplicateRow(file, id){
+  const r = files[file].rows.find(x=>x.id===id); if (!r) return;
+  openEditor(file, null, { ...r.data }, id);
+}
+function nextPrintOrder(){
+  let m = 0; files.tests.rows.forEach(r=>{ const n=parseFloat(val('tests',r,'סדר הדפסה')); if(!isNaN(n)&&n>m) m=n; });
+  return String(m+1);
+}
+
+/* ============================================================
+   עורך (טופס)
+   ============================================================ */
+function openEditor(file, id, prefill=null, afterId=null){
+  const f = files[file];
+  const row = id ? f.rows.find(r=>r.id===id) : null;
+  let data = row ? { ...row.data } : (prefill ? { ...prefill } : {});
+  if (!row && !prefill){ // ערכי ברירת מחדל לשורה חדשה
+    const set = (n,v)=>{ const h=hdr(file,n); if(h) data[h]=v; };
+    if (file==='tests'){ set('קופת חולים', ui.kupa || 'כללית'); if (ui.lab) set('מעבדה', ui.lab); set('כלל מבחנה','shared'); set('כמות מבחנות','1'); set('סדר הדפסה', nextPrintOrder()); }
+    if (file==='messages') set('לפרסום?','כן');
+    if (file==='final'){ set('פעיל','כן'); set('תאריך', new Date().toISOString().slice(0,10)); }
+  }
+  if (prefill && file==='tests'){ const h=hdr('tests','סדר הדפסה'); if(h) data[h]=nextPrintOrder(); }
+  editing = { file, id: row ? row.id : null, afterId };
+
+  $('edTitle').textContent = row ? `עריכת ${file==='tests'?'בדיקה':file==='messages'?'הודעה':'מסך סיום'}` : prefill ? 'שכפול בדיקה' : `${file==='tests'?'בדיקה חדשה':file==='messages'?'הודעה חדשה':'תמונת סיום חדשה'}`;
+  $('edSub').textContent = prefill ? 'נוצרת שורה חדשה על בסיס הקיימת – שנה לפחות את הקופה או השם' : (row ? (norm(Object.values(row.data)[0])) : '');
+
+  const defs = FIELD_DEFS[file];
+  const sections = new Map();
+  f.headers.forEach(h=>{
+    const d = defs[norm(h)] || { sec:'שדות נוספים', type:'text' };
+    if (!sections.has(d.sec)) sections.set(d.sec, []);
+    sections.get(d.sec).push([h, d]);
+  });
+
+  let html = '';
+  if (file==='tests' && row){ const iss = testIssues(row); if (iss.length) html += `<div class="note warn" style="margin-bottom:12px">⚠ ${iss.map(esc).join('<br>⚠ ')}</div>`; }
+  const order = Object.keys(defs);
+  sections.forEach(list => list.sort((a,b)=>{ const ia=order.indexOf(norm(a[0])), ib=order.indexOf(norm(b[0])); return (ia<0?999:ia)-(ib<0?999:ib); }));
+  sections.forEach((list, sec)=>{
+    html += `<div class="section-title">${esc(sec)}</div><div class="fgrid">`;
+    list.forEach(([h,d])=> html += fieldHtml(file, h, d, data[h] ?? ''));
+    html += `</div>`;
+  });
+  $('edBody').innerHTML = html;
+  $('edBody').querySelectorAll('[data-multi]').forEach(el=>renderMulti(el.dataset.multi));
+  $('edBody').querySelectorAll('[data-peek]').forEach(el=>renderSinglePeek(el.dataset.peek));
+  openModal('editorModal');
+  setTimeout(()=>{ const first = $('edBody').querySelector('input,textarea,select'); first && first.focus(); }, 50);
+}
+
+let fieldSeq = 0;
+function fieldHtml(file, h, d, v){
+  const id = 'fld' + (fieldSeq++);
+  const label = esc(d.label || norm(h));
+  const common = `id="${id}" data-h="${esc(h)}"`;
+  let input = '';
+  if (d.type==='textarea'){
+    input = `<textarea ${common} class="textarea" rows="${d.rows||4}">${esc(v)}</textarea>`;
+  } else if (d.type==='select'){
+    const opts = [...d.options];
+    if (norm(v) && !opts.some(o=>o[0]===norm(v))) opts.unshift([v, `${norm(v)} (ערך קיים)`]);
+    const cur = opts.some(o=>o[0]===norm(v)) ? norm(v) : v;
+    input = `<select ${common} class="select">${d.req?'':`<option value="">${norm(h)==='כלל מבחנה'?'— ריק (נחשב משותפת) —':'— ללא —'}</option>`}${opts.map(o=>`<option value="${esc(o[0])}" ${o[0]===cur?'selected':''}>${esc(o[1])}</option>`).join('')}</select>`;
+  } else if (d.type==='multi'){
+    const vals = uniq(file, norm(h));
+    input = `<div class="stack" data-multi="${id}" data-col="${esc(norm(h))}" style="display:flex;flex-direction:column;gap:8px">
+      <input type="hidden" ${common} value="${esc(joinMulti(splitMulti(v)))}">
+      <div class="multi-chips" id="${id}_chips"></div>
+      <div class="multi-add">
+        <input id="${id}_in" class="input" list="${id}_l" autocomplete="off" placeholder="בחר מהרשימה או הקלד שם חדש ולחץ Enter"
+          onkeydown="if(event.key==='Enter'||event.key===','){event.preventDefault();multiAdd('${id}')}"
+          onchange="if(this.value && [...document.getElementById('${id}_l').options].some(o=>o.value===this.value))multiAdd('${id}')">
+        <button type="button" class="btn" onclick="multiAdd('${id}')">+ הוסף</button>
+      </div>
+      <datalist id="${id}_l">${vals.map(([x,c])=>`<option value="${esc(x)}">${c} בדיקות</option>`).join('')}</datalist>
+      <div class="peek" id="${id}_peek"></div>
+    </div>`;
+  } else if (d.type==='list'){
+    const vals = uniq(file, norm(h));
+    input = `<input ${common} class="input" list="${id}_l" value="${esc(v)}" autocomplete="off" ${d.peek?`data-peek="${id}" data-col="${esc(norm(h))}" oninput="renderSinglePeek('${id}')"`:''}><datalist id="${id}_l">${vals.map(([x,c])=>`<option value="${esc(x)}">${c} שורות</option>`).join('')}</datalist>${d.peek?`<div class="peek" id="${id}_peek" style="margin-top:4px"></div>`:''}`;
+  } else if (d.type==='number'){
+    input = `<input ${common} class="input" type="number" step="any" ${d.min!=null?`min="${d.min}"`:''} value="${esc(v)}" dir="ltr" style="text-align:right">`;
+  } else if (d.type==='date'){
+    const iso = /^\d{4}-\d{2}-\d{2}/.test(norm(v)) ? norm(v).slice(0,10) : '';
+    input = iso || !norm(v) ? `<input ${common} class="input" type="date" value="${esc(iso)}">` : `<input ${common} class="input" value="${esc(v)}" placeholder="YYYY-MM-DD" dir="ltr">`;
+  } else if (d.type==='color'){
+    const code = colorCode(v);
+    const known = TUBE_COLORS.some(c=>c[0]===norm(v));
+    input = `<div class="color-row">
+      <span class="big-swatch" id="${id}_sw" style="background:${COLOR_HEX[code]||'#fff'}"></span>
+      <select ${common} class="select" onchange="$('${id}_sw').style.background=(COLOR_HEX[this.value]||COLOR_HEX[colorCode(this.value)]||'#fff')">
+        <option value="">— בחר צבע —</option>
+        ${!known && norm(v) ? `<option value="${esc(v)}" selected>${esc(norm(v))} (ערך קיים${code?' – מזוהה כ'+COLOR_HE[code]:' – לא מזוהה'})</option>` : ''}
+        ${TUBE_COLORS.map(c=>`<option value="${c[0]}" ${c[0]===norm(v)?'selected':''}>${c[1]} (${c[0]})</option>`).join('')}
+      </select></div>`;
+  } else if (d.type==='image'){
+    const url = imageUrl(v);
+    input = `<div class="img-row">
+      <img class="img-prev" id="${id}_pv" src="${esc(url)}" alt="" style="${url?'':'visibility:hidden'}" onerror="this.style.visibility='hidden'" onload="this.style.visibility='visible'">
+      <div class="stack">
+        <input ${common} class="input" list="imgList_${id}" value="${esc(v)}" dir="ltr" autocomplete="off" placeholder="example.jpg"
+          oninput="const u=imageUrl(this.value);const p=$('${id}_pv');p.style.visibility=u?'visible':'hidden';p.src=u">
+        <datalist id="imgList_${id}">${imageList.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button type="button" class="btn btn-sm" onclick="uploadImageFor('${id}')">⬆ העלאת תמונה חדשה ל-GitHub</button>
+          ${imageList.length ? `<span class="hint" style="align-self:center">${imageList.length} תמונות קיימות – התחל להקליד לבחירה</span>` : ''}
+        </div>
+      </div></div>`;
+  } else {
+    input = `<input ${common} class="input" value="${esc(v)}" ${d.ltr?'dir="ltr" style="text-align:right"':''}>`;
+  }
+  return `<div class="field ${d.span===2?'span2':''}">
+    <label for="${id}">${label} ${d.req?'<span class="req">*</span>':''}</label>
+    ${input}
+    ${d.hint ? `<span class="hint">${esc(d.hint)}</span>` : ''}
+  </div>`;
+}
+
+/* ---------- שדה רב-ערכי + "בדיקות באותה קבוצה" ---------- */
+let peekAllKupot = false;
+function multiValues(id){ return splitMulti($(id).value); }
+function multiAdd(id){
+  const inp = $(id+'_in'); const add = splitMulti(inp.value);
+  if (!add.length) return;
+  const cur = multiValues(id);
+  add.forEach(v=>{ if (!cur.some(c=>c.toLowerCase()===v.toLowerCase())) cur.push(v); });
+  $(id).value = joinMulti(cur); inp.value = '';
+  renderMulti(id); inp.focus();
+}
+function multiRemove(id, i){
+  const cur = multiValues(id); cur.splice(i,1);
+  $(id).value = joinMulti(cur); renderMulti(id);
+}
+function editorValue(name){
+  const h = hdr(editing.file, name); if (!h) return '';
+  const el = [...$('edBody').querySelectorAll('[data-h]')].find(x=>x.dataset.h===h);
+  return el ? el.value : '';
+}
+function renderMulti(id){
+  const vals = multiValues(id);
+  $(id+'_chips').innerHTML = vals.length
+    ? vals.map((v,i)=>`<span class="tagchip">${esc(v)}<button type="button" title="הסר" onclick="multiRemove('${id}',${i})">✕</button></span>`).join('')
+    : `<span class="peek-empty">לא נבחר עדיין</span>`;
+  renderPeek(id);
+}
+function renderPeek(id){
+  const box = $(id+'_peek'); if (!box || !editing) return;
+  const col = box.closest('[data-multi]').dataset.col;
+  const vals = multiValues(id);
+  if (!vals.length){ box.style.display='none'; return; }
+  box.style.display='flex';
+  const kupa = norm(editorValue('קופת חולים'));
+  const groups = vals.map(v=>{
+    const members = files.tests.rows.filter(r=>
+      r.id !== editing.id &&
+      splitMulti(val('tests',r,col)).some(x=>x.toLowerCase()===v.toLowerCase()) &&
+      (peekAllKupot || !kupa || norm(val('tests',r,'קופת חולים'))===kupa));
+    members.sort((a,b)=>{
+      const na=parseFloat(val('tests',a,'סדר הדפסה')), nb=parseFloat(val('tests',b,'סדר הדפסה'));
+      return (isNaN(na)?1e9:na)-(isNaN(nb)?1e9:nb);
+    });
+    return `<div>
+      <div class="peek-group-title">${esc(v)} · ${members.length} בדיקות נוספות${peekAllKupot||!kupa?'':' בקופה '+esc(kupa)}</div>
+      ${members.length ? `<div class="peek-list">${members.map(r=>{
+        const code = colorCode(val('tests',r,'צבע מבחנה'));
+        return `<span class="peek-item"><span class="swatch" style="background:${COLOR_HEX[code]||'#fff'};margin:0"></span>${esc(val('tests',r,'שם בדיקה'))}${peekAllKupot?` <span class="k">${esc(norm(val('tests',r,'קופת חולים')))}</span>`:''}</span>`;
+      }).join('')}</div>` : `<div class="peek-empty">אין עדיין בדיקות נוספות בקבוצה הזו – זו תהיה הראשונה</div>`}
+    </div>`;
+  }).join('');
+  box.innerHTML = `<div class="peek-head">בדיקות באותה קבוצה
+      <span class="spacer"></span>
+      <label class="check" style="font-size:12px"><input type="checkbox" ${peekAllKupot?'checked':''} onchange="peekAllKupot=this.checked;refreshPeeks()"> כל הקופות</label>
+    </div>${groups}`;
+}
+function refreshPeeks(){
+  $('edBody').querySelectorAll('[data-multi]').forEach(el=>renderPeek(el.dataset.multi));
+  $('edBody').querySelectorAll('[data-peek]').forEach(el=>renderSinglePeek(el.dataset.peek));
+}
+// קבוצת מבחנה (tube_group): ערך יחיד – מציג את הבדיקות שיתאחדו איתה לאותה מבחנה
+function renderSinglePeek(id){
+  const box = $(id+'_peek'), inp = $(id); if (!box || !inp || !editing) return;
+  const col = inp.dataset.col, v = norm(inp.value);
+  if (!v){ box.style.display='none'; return; }
+  box.style.display='flex';
+  const kupa = norm(editorValue('קופת חולים'));
+  const members = files.tests.rows.filter(r=>
+    r.id !== editing.id && norm(val('tests',r,col)).toLowerCase()===v.toLowerCase() &&
+    (peekAllKupot || !kupa || norm(val('tests',r,'קופת חולים'))===kupa));
+  members.sort((a,b)=>{ const na=parseFloat(val('tests',a,'סדר הדפסה')), nb=parseFloat(val('tests',b,'סדר הדפסה')); return (isNaN(na)?1e9:na)-(isNaN(nb)?1e9:nb); });
+  // בדיקת עקביות: כל הבדיקות באותה קבוצה צריכות אותו צבע מבחנה
+  const myColor = colorCode(editorValue('צבע מבחנה'));
+  const colors = new Set(members.map(r=>colorCode(val('tests',r,'צבע מבחנה'))||'?'));
+  if (myColor) colors.add(myColor);
+  const mixed = colors.size > 1;
+  box.innerHTML = `<div class="peek-head">בדיקות שיתאחדו לאותה מבחנה
+      <span class="spacer"></span>
+      <label class="check" style="font-size:12px"><input type="checkbox" ${peekAllKupot?'checked':''} onchange="peekAllKupot=this.checked;refreshPeeks()"> כל הקופות</label>
+    </div>
+    <div>
+      <div class="peek-group-title">${esc(v)} · ${members.length} בדיקות נוספות${peekAllKupot||!kupa?'':' בקופה '+esc(kupa)}</div>
+      ${members.length ? `<div class="peek-list">${members.map(r=>{
+        const code = colorCode(val('tests',r,'צבע מבחנה'));
+        return `<span class="peek-item"><span class="swatch" style="background:${COLOR_HEX[code]||'#fff'};margin:0"></span>${esc(val('tests',r,'שם בדיקה'))}${peekAllKupot?` <span class="k">${esc(norm(val('tests',r,'קופת חולים')))}</span>`:''}</span>`;
+      }).join('')}</div>` : `<div class="peek-empty">אין בדיקות נוספות בקבוצה הזו – הבדיקה תקבל מבחנה משלה</div>`}
+    </div>
+    ${mixed ? `<div class="note warn" style="padding:6px 10px">⚠ בקבוצה יש בדיקות עם צבעי מבחנה שונים (${[...colors].map(c=>COLOR_HE[c]||'לא מזוהה').join(', ')}). בדיקות שמתאחדות למבחנה אחת צריכות בדרך כלל אותו צבע.</div>` : ''}`;
+}
+$('edBody').addEventListener('change', e=>{ if (!e.target.closest('[data-multi]')) refreshPeeks(); });
+
+function saveEditor(){
+  if (!editing) return;
+  const {file, id, afterId} = editing, f = files[file], defs = FIELD_DEFS[file];
+  $('edBody').querySelectorAll('[data-multi]').forEach(el=>{ if ($(el.dataset.multi+'_in').value.trim()) multiAdd(el.dataset.multi); });
+  const data = {};
+  f.headers.forEach(h=> data[h] = '');
+  $('edBody').querySelectorAll('[data-h]').forEach(el=>{
+    const h = el.dataset.h;
+    let v = el.value ?? '';
+    const d = defs[norm(h)];
+    if (!d || d.type!=='textarea') v = v.trim();     // מנקה רווחים מיותרים בקצוות (חוץ מטקסט ארוך)
+    else v = v.replace(/\s+$/,'');
+    data[h] = v;
+  });
+  // בדיקות חובה
+  for (const h of f.headers){
+    const d = defs[norm(h)];
+    if (d && d.req && !norm(data[h])){ toast(`השדה "${d.label||norm(h)}" הוא חובה`, 'err'); return; }
+  }
+  if (file==='tests'){
+    const nm = norm(data[hdr('tests','שם בדיקה')]), kp = norm(data[hdr('tests','קופת חולים')]);
+    const dup = f.rows.find(r=> r.id!==id && norm(val('tests',r,'שם בדיקה')).toLowerCase()===nm.toLowerCase() && norm(val('tests',r,'קופת חולים'))===kp);
+    if (dup && !confirm(`כבר קיימת בדיקה "${nm}" בקופה ${kp}. לשמור בכל זאת?`)) return;
+  }
+  if (id){
+    const r = f.rows.find(x=>x.id===id);
+    // שומרים את הערכים המקוריים אם לא השתנו בפועל (למשל רווח בסוף), כדי לא לסמן "נערך" סתם
+    Object.keys(data).forEach(h=>{ if (norm(data[h])===norm(r.data[h]) && !(defs[norm(h)]?.type==='textarea')) data[h] = r.data[h]; });
+    if (JSON.stringify(data) !== JSON.stringify(r.data)) r.data = data;
+  } else {
+    const row = { id: nextId++, data, orig:null };
+    const idx = afterId ? f.rows.findIndex(r=>r.id===afterId) : -1;
+    if (idx>=0) f.rows.splice(idx+1, 0, row); else f.rows.push(row);
+  }
+  closeModal('editorModal');
+  toast('השינוי נשמר בטיוטה. לחץ "שמור ב-GitHub" כדי לפרסם.');
+  render();
+}
+
+async function uploadImageFor(fieldId){
+  if (!hasToken()){ toast('העלאת תמונה דורשת חיבור ל-GitHub עם Token.', 'err'); return; }
+  const input = $('hiddenImgInput');
+  input.onchange = async ()=>{
+    const file = input.files[0]; input.value=''; if (!file) return;
+    if (file.size > 20*1024*1024){ toast('התמונה גדולה מדי (מעל 20MB).', 'err'); return; }
+    let name = prompt('שם הקובץ שיישמר בתיקיית images (מומלץ באנגלית, בלי רווחים):', file.name.replace(/\s+/g,'-'));
+    if (!name) return; name = name.trim();
+    const path = `${cfg.imagesDir}/${name}`;
+    try {
+      toast('מעלה תמונה...');
+      const sha = await ghGetSha(path);
+      if (sha && !confirm(`כבר קיימת תמונה בשם ${name}. להחליף אותה?`)) return;
+      const b64 = bytesToB64(new Uint8Array(await file.arrayBuffer()));
+      await ghPutFile(path, b64, sha, `העלאת תמונה ${name} מעמוד הניהול`);
+      if (!imageList.includes(name)) imageList.push(name);
+      const el = $(fieldId); if (el){ el.value = name; }
+      const pv = $(fieldId+'_pv'); if (pv){ pv.src = URL.createObjectURL(file); pv.style.visibility='visible'; }
+      toast(`התמונה ${name} הועלתה ל-GitHub.`, 'ok');
+    } catch(e){ toast(e.message, 'err'); }
+  };
+  input.click();
+}
+
+/* ============================================================
+   החלפת ערך גורפת
+   ============================================================ */
+const BULK_COLS = ['מעבדה','tube_group','test type','בדיקות רוטינה','סוג המבחנה','צבע מבחנה','קופת חולים','כלל מבחנה','תמונה בגט הב'];
+function openBulk(){
+  $('b_col').innerHTML = BULK_COLS.filter(c=>hdr('tests',c)).map(c=>`<option value="${esc(c)}">${esc(FIELD_DEFS.tests[c]?.label||c)}</option>`).join('');
+  $('b_onlyFiltered').checked = false;
+  fillBulkValues(); openModal('bulkModal');
+}
+function fillBulkValues(){
+  const col = $('b_col').value, vals = uniq('tests', col);
+  $('b_from').innerHTML = vals.map(([v,c])=>`<option value="${esc(v)}">${esc(v)} (${c})</option>`).join('');
+  $('b_to_list').innerHTML = vals.map(([v])=>`<option value="${esc(v)}">`).join('');
+  $('b_to').value = ''; updateBulkCount();
+}
+function bulkTargets(){
+  const col = $('b_col').value, from = $('b_from').value;
+  const pool = $('b_onlyFiltered').checked ? filteredTests() : files.tests.rows;
+  if (isMulti('tests', col)) return pool.filter(r=> splitMulti(val('tests',r,col)).includes(from));
+  return pool.filter(r=> norm(val('tests',r,col)) === from);
+}
+function updateBulkCount(){ $('b_count').textContent = `${bulkTargets().length} שורות יעודכנו.`; }
+function applyBulk(){
+  const col = $('b_col').value, to = $('b_to').value.trim(), h = hdr('tests', col), rows = bulkTargets();
+  if (!rows.length) return;
+  if (!to && !confirm('הערך החדש ריק – לרוקן את השדה בכל השורות האלה?')) return;
+  rows.forEach(r=>{
+    if (isMulti('tests', col)){
+      const from = $('b_from').value;
+      const list = splitMulti(r.data[h]).flatMap(x => x===from ? (to ? [to] : []) : [x]);
+      r.data = { ...r.data, [h]: joinMulti([...new Set(list)]) };
+    } else r.data = { ...r.data, [h]: to };
+  });
+  closeModal('bulkModal');
+  toast(`${rows.length} שורות עודכנו בטיוטה.`); render();
+}
+
+/* ============================================================
+   הגדרות
+   ============================================================ */
+function loadCfg(){
+  try { const s = JSON.parse(localStorage.getItem(CFG_KEY)||'null'); if (s) cfg = { ...cfg, ...s, paths:{ ...cfg.paths, ...(s.paths||{}) } }; } catch(e){}
+}
+function persistCfg(){ try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch(e){} }
+function openSettings(){
+  $('s_owner').value = cfg.owner; $('s_repo').value = cfg.repo; $('s_branch').value = cfg.branch;
+  $('s_images').value = cfg.imagesDir; $('s_token').value = cfg.token;
+  $('s_code1').value = ''; $('s_code2').value = ''; $('s_codeRemove').checked = false;
+  $('s_codeState').textContent = siteSettings.adminCodeHash ? 'כרגע מוגדר קוד כניסה. השאר ריק כדי לא לשנות.' : 'כרגע אין קוד כניסה – כל מי שפותח את העמוד רואה אותו (אבל לא יכול לשמור בלי Token).';
+  $('s_codeRemoveWrap').style.display = siteSettings.adminCodeHash ? '' : 'none';
+  $('s_p_tests').value = cfg.paths.tests; $('s_p_messages').value = cfg.paths.messages; $('s_p_final').value = cfg.paths.final;
+  $('s_repoHint').textContent = cfg.repo; $('s_result').innerHTML = '';
+  openModal('settingsModal');
+}
+function readSettings(){
+  cfg.owner = $('s_owner').value.trim(); cfg.repo = $('s_repo').value.trim(); cfg.branch = $('s_branch').value.trim() || 'main';
+  cfg.imagesDir = $('s_images').value.trim().replace(/^\/|\/$/g,'') || 'images'; cfg.token = $('s_token').value.trim();
+  cfg.paths = { tests:$('s_p_tests').value.trim()||'data/tests.csv', messages:$('s_p_messages').value.trim()||'data/messages.csv', final:$('s_p_final').value.trim()||'data/final-slide.csv', colors:cfg.paths.colors||'data/group-colors.csv' };
+}
+async function testConnection(){
+  readSettings();
+  const box = $('s_result');
+  box.innerHTML = `<div class="note info">בודק...</div>`;
+  try {
+    const repo = await gh(`/repos/${cfg.owner}/${cfg.repo}`);
+    const canPush = repo.permissions && repo.permissions.push;
+    box.innerHTML = canPush
+      ? `<div class="note info" style="background:var(--ok-soft);color:var(--ok)">✓ מחובר לריפו <b dir="ltr">${esc(repo.full_name)}</b> עם הרשאת כתיבה.</div>`
+      : `<div class="note warn">הריפו נמצא, אבל ל-Token אין הרשאת כתיבה. ${hasToken()?'הגדר Contents: Read and write.':'לא הוזן Token.'}</div>`;
+  } catch(e){ box.innerHTML = `<div class="note warn">✕ ${esc(e.message)}</div>`; }
+}
+async function saveSettings(){
+  readSettings();
+  const c1 = $('s_code1').value, c2 = $('s_code2').value, removeCode = $('s_codeRemove').checked;
+  if (c1 || c2 || removeCode){
+    if (!removeCode){
+      if (c1 !== c2){ toast('שני הקודים לא זהים', 'err'); return; }
+      if (c1.length < 4){ toast('הקוד צריך להיות לפחות 4 תווים', 'err'); return; }
+    }
+    if (!hasToken()){ toast('כדי לשמור קוד כניסה צריך Token של GitHub.', 'err'); return; }
+    try {
+      const next = { ...siteSettings };
+      if (removeCode) delete next.adminCodeHash; else next.adminCodeHash = codeHash(c1);
+      const sha = await ghGetSha(SETTINGS_PATH);
+      await ghPutFile(SETTINGS_PATH, bytesToB64(new TextEncoder().encode(JSON.stringify(next, null, 2) + '\n')), sha,
+        removeCode ? 'הסרת קוד כניסה לעמוד הניהול' : 'עדכון קוד כניסה לעמוד הניהול');
+      siteSettings = next;
+      rememberUnlock(next.adminCodeHash || '', true);
+      toast(removeCode ? 'קוד הכניסה הוסר.' : 'קוד הכניסה נשמר. הוא ייכנס לתוקף בעוד כדקה.', 'ok');
+    } catch(e){ toast(e.message, 'err'); return; }
+  }
+  const dirty = Object.keys(files).some(k=>fileStats(k).dirty);
+  if (dirty && !confirm('שמירת ההגדרות תטען מחדש את הנתונים מ-GitHub ותבטל שינויים שלא נשמרו. להמשיך?')) return;
+  persistCfg(); closeModal('settingsModal'); await loadAll();
+}
+function forgetToken(){
+  cfg.token = ''; persistCfg(); $('s_token').value = '';
+  toast('ה-Token נמחק מהדפדפן.'); render();
+}
+
+/* ============================================================
+   מודלים, קיצורי מקלדת, אזהרת יציאה
+   ============================================================ */
+function openModal(id){ $(id).classList.add('open'); document.body.style.overflow='hidden'; }
+function closeModal(id){ $(id).classList.remove('open'); if (!document.querySelector('.backdrop.open')) document.body.style.overflow=''; if (id==='editorModal') editing=null; }
+
+document.addEventListener('keydown', e=>{
+  if (e.key==='Escape'){ document.querySelectorAll('.backdrop.open').forEach(m=>closeModal(m.id)); }
+  if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s'){
+    e.preventDefault();
+    if ($('editorModal').classList.contains('open')) saveEditor();
+    else if (tabStats(ui.tab).dirty) saveTab(ui.tab);
+  }
+  if ((e.ctrlKey||e.metaKey) && e.key==='Enter' && $('editorModal').classList.contains('open')){ e.preventDefault(); saveEditor(); }
+});
+window.addEventListener('beforeunload', e=>{
+  if (Object.keys(files).some(k=>fileStats(k).dirty)){ e.preventDefault(); e.returnValue=''; }
+});
+
+/* ============================================================
+   קוד כניסה לעמוד הניהול
+   ה-hash נשמר ב-data/settings.json. זו הגנה מפני כניסה מקרית בלבד –
+   ההגנה האמיתית היא ה-Token: בלעדיו אי אפשר לשמור שום שינוי.
+   ============================================================ */
+const SETTINGS_PATH = 'data/settings.json';
+const UNLOCK_KEY = 'labtests_admin_unlock';
+let siteSettings = {};
+function sha256Hex(str){
+  const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  const bytes = new TextEncoder().encode(str);
+  const len = bytes.length, bitLen = len * 8;
+  const total = ((len + 9 + 63) >> 6) << 6;
+  const m = new Uint8Array(total); m.set(bytes); m[len] = 0x80;
+  const dv = new DataView(m.buffer); dv.setUint32(total - 4, bitLen >>> 0); dv.setUint32(total - 8, Math.floor(bitLen / 2**32));
+  let H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const W = new Uint32Array(64), r = (x,n)=>(x>>>n)|(x<<(32-n));
+  for (let o=0;o<total;o+=64){
+    for (let i=0;i<16;i++) W[i]=dv.getUint32(o+i*4);
+    for (let i=16;i<64;i++){ const s0=r(W[i-15],7)^r(W[i-15],18)^(W[i-15]>>>3), s1=r(W[i-2],17)^r(W[i-2],19)^(W[i-2]>>>10); W[i]=(W[i-16]+s0+W[i-7]+s1)>>>0; }
+    let [a,b,c,d,e,f,g,h]=H;
+    for (let i=0;i<64;i++){
+      const t1=(h+(r(e,6)^r(e,11)^r(e,25))+((e&f)^(~e&g))+K[i]+W[i])>>>0;
+      const t2=((r(a,2)^r(a,13)^r(a,22))+((a&b)^(a&c)^(b&c)))>>>0;
+      h=g; g=f; f=e; e=(d+t1)>>>0; d=c; c=b; b=a; a=(t1+t2)>>>0;
+    }
+    H=H.map((x,i)=>(x+[a,b,c,d,e,f,g,h][i])>>>0);
+  }
+  return H.map(x=>x.toString(16).padStart(8,'0')).join('');
+}
+const codeHash = code => sha256Hex('lab-tests-admin::' + String(code).trim());
+async function loadSiteSettings(){
+  siteSettings = {};
+  try {
+    if (hasToken()){ const { text } = await ghGetFile(SETTINGS_PATH); siteSettings = JSON.parse(text || '{}'); return; }
+  } catch(e){ /* לא קיים עדיין */ }
+  try { const r = await fetch(SETTINGS_PATH + '?t=' + Date.now(), { cache:'no-store' }); if (r.ok) siteSettings = await r.json(); } catch(e){}
+}
+function isUnlocked(hash){
+  try { return sessionStorage.getItem(UNLOCK_KEY) === hash || localStorage.getItem(UNLOCK_KEY) === hash; } catch(e){ return false; }
+}
+function rememberUnlock(hash, persistent){
+  try { sessionStorage.setItem(UNLOCK_KEY, hash); if (persistent) localStorage.setItem(UNLOCK_KEY, hash); else localStorage.removeItem(UNLOCK_KEY); } catch(e){}
+}
+function tryUnlock(){
+  const h = codeHash($('lockCode').value);
+  if (h !== siteSettings.adminCodeHash){ $('lockErr').textContent = 'קוד שגוי'; $('lockCode').select(); return; }
+  rememberUnlock(h, $('lockRemember').checked);
+  $('lockScreen').style.display = 'none';
+  loadAll();
+}
+async function startAdmin(){
+  await loadSiteSettings();
+  const h = siteSettings.adminCodeHash;
+  if (h && !isUnlocked(h)){
+    ui.loading = false; $('view').innerHTML = ''; $('saveBar').style.display = 'none';
+    $('lockScreen').style.display = 'flex';
+    setTimeout(()=>$('lockCode').focus(), 50);
+    return;
+  }
+  loadAll();
+}
+
+loadCfg();
+startAdmin();
+</script>
+</body>
+</html>
